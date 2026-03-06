@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/lib/auth-context";
+import { apiClient } from "@/lib/api-client";
 import { signupSchema, SignupFormData } from "@/lib/schemas";
 import { Input } from "@/components/input";
 import { Button } from "@/components/button";
@@ -13,7 +15,11 @@ import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup, isLoading, error, clearError } = useAuth();
+  const { signup, isLoading: authLoading, error, clearError } = useAuth();
+  const [isReady, setIsReady] = useState(false);
+  const initialized = useRef(false);
+
+  // useForm must be called unconditionally (Rules of Hooks)
   const {
     register,
     handleSubmit,
@@ -22,15 +28,39 @@ export default function SignupPage() {
     resolver: zodResolver(signupSchema),
   });
 
+  // Check if already authenticated on mount (synchronous check)
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
+    const user = apiClient.getUser();
+    if (user) {
+      if (user.role === "ADMIN") {
+        router.replace("/admin");
+      } else {
+        router.replace("/dashboard");
+      }
+    } else {
+      setIsReady(true);
+    }
+  }, [router]);
+
+  // Show nothing while checking auth
+  if (!isReady) {
+    return null;
+  }
+
   const onSubmit = async (data: SignupFormData) => {
     try {
       console.log("Signup attempt for:", data.email);
-      await signup(data.email, data.password, data.name);
-      console.log("Signup successful, redirecting to dashboard");
-      // Use setTimeout to ensure state updates are processed first
-      setTimeout(() => {
+      const response = await signup(data.email, data.password, data.name);
+      console.log("Signup successful, user role:", response?.user?.role);
+      // Redirect based on user role
+      if (response?.user?.role === "ADMIN") {
+        router.push("/admin");
+      } else {
         router.push("/dashboard");
-      }, 100);
+      }
     } catch (err) {
       console.error("Signup failed:", err);
     }
@@ -73,7 +103,7 @@ export default function SignupPage() {
           {...register("confirmPassword")}
         />
 
-        <Button type="submit" isLoading={isLoading}>
+        <Button type="submit" isLoading={authLoading}>
           Create Account
         </Button>
       </form>

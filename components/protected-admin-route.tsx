@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { apiClient } from "@/lib/api-client";
 
 interface ProtectedAdminRouteProps {
   children: React.ReactNode;
@@ -10,17 +11,21 @@ interface ProtectedAdminRouteProps {
 
 export function ProtectedAdminRoute({ children }: ProtectedAdminRouteProps) {
   const router = useRouter();
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isLoading } = useAuth();
+  const initialized = useRef(false);
 
+  // Check localStorage directly to avoid race condition
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        router.push("/login");
-      } else if (!isAdmin) {
-        router.push("/dashboard");
-      }
+    if (initialized.current) return;
+    initialized.current = true;
+
+    const user = apiClient.getUser();
+    if (!user) {
+      router.replace("/login");
+    } else if (user.role !== "ADMIN") {
+      router.replace("/dashboard");
     }
-  }, [isAuthenticated, isAdmin, isLoading, router]);
+  }, [router]);
 
   if (isLoading) {
     return (
@@ -30,7 +35,9 @@ export function ProtectedAdminRoute({ children }: ProtectedAdminRouteProps) {
     );
   }
 
-  if (!isAuthenticated || !isAdmin) {
+  // Double-check localStorage after loading
+  const user = apiClient.getUser();
+  if (!user || user.role !== "ADMIN") {
     return null;
   }
 

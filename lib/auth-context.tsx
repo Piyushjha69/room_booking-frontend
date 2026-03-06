@@ -10,7 +10,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<any>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<any>;
   logout: () => Promise<void>;
   error: string | null;
   clearError: () => void;
@@ -72,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(response.user);
       setIsAuthenticated(true);
       setIsAdmin(response.user.role === "ADMIN");
+      return response;
     } catch (err) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);

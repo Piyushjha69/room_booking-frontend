@@ -34,6 +34,11 @@ function BookingFormContent() {
     endDate: "",
   });
 
+  const [today] = useState(() => {
+    const date = new Date();
+    return date.toISOString().split('T')[0];
+  });
+
   useEffect(() => {
     if (!roomId) {
       setError("Room ID is required");
@@ -93,7 +98,32 @@ function BookingFormContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm() || !roomId) {
+    if (!validateForm() || !roomId || !room) {
+      return;
+    }
+
+    // Show confirmation dialog
+    const nights = Math.ceil(
+      (new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) /
+      (1000 * 60 * 60 * 24)
+    );
+    const totalPrice = (
+      (typeof room.pricePerNight === 'string'
+        ? parseFloat(room.pricePerNight)
+        : room.pricePerNight) * nights
+    ).toFixed(2);
+
+    const confirmed = confirm(
+      `Please confirm your booking:\n\n` +
+      `Room: ${room.name}\n` +
+      `Check-in: ${new Date(formData.startDate).toLocaleDateString()}\n` +
+      `Check-out: ${new Date(formData.endDate).toLocaleDateString()}\n` +
+      `Total nights: ${nights}\n` +
+      `Total price: $${totalPrice}\n\n` +
+      `Click OK to proceed.`
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -192,6 +222,7 @@ function BookingFormContent() {
                           name="startDate"
                           value={formData.startDate}
                           onChange={handleChange}
+                          min={today}
                           required
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
@@ -205,6 +236,7 @@ function BookingFormContent() {
                           name="endDate"
                           value={formData.endDate}
                           onChange={handleChange}
+                          min={formData.startDate || today}
                           required
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />

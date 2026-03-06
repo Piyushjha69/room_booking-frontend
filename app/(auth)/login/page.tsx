@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/lib/auth-context";
+import { apiClient } from "@/lib/api-client";
 import { loginSchema, LoginFormData } from "@/lib/schemas";
 import { Input } from "@/components/input";
 import { Button } from "@/components/button";
@@ -13,7 +15,11 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login, isLoading: authLoading, error, clearError } = useAuth();
+  const [isReady, setIsReady] = useState(false);
+  const initialized = useRef(false);
+
+  // useForm must be called unconditionally (Rules of Hooks)
   const {
     register,
     handleSubmit,
@@ -22,22 +28,39 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  // Check if already authenticated on mount (synchronous check)
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
+    const user = apiClient.getUser();
+    if (user) {
+      if (user.role === "ADMIN") {
+        router.replace("/admin");
+      } else {
+        router.replace("/dashboard");
+      }
+    } else {
+      setIsReady(true);
+    }
+  }, [router]);
+
+  // Show nothing while checking auth
+  if (!isReady) {
+    return null;
+  }
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       console.log("Login attempt for:", data.email);
       const response = await login(data.email, data.password);
       console.log("Login successful, user role:", response?.user?.role);
-      // Use setTimeout to ensure state updates are processed first
-      setTimeout(() => {
-        const user = JSON.parse(localStorage.getItem("user") || "{}");
-        if (user?.role === "ADMIN") {
-          console.log("Admin user detected, redirecting to admin panel");
-          router.push("/admin");
-        } else {
-          console.log("Regular user, redirecting to dashboard");
-          router.push("/dashboard");
-        }
-      }, 100);
+      // Redirect based on user role
+      if (response?.user?.role === "ADMIN") {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       console.error("Login failed:", err);
     }
@@ -64,7 +87,7 @@ export default function LoginPage() {
           {...register("password")}
         />
 
-        <Button type="submit" isLoading={isLoading}>
+        <Button type="submit" isLoading={authLoading}>
           Sign In
         </Button>
       </form>

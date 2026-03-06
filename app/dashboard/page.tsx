@@ -5,10 +5,13 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Button } from "@/components/button";
+import { useEffect } from "react";
 
 function DashboardContent() {
   const router = useRouter();
   const { user, logout, isLoading } = useAuth();
+
+
 
   const handleLogout = async () => {
     try {

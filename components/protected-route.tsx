@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { apiClient } from "@/lib/api-client";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,14 +11,21 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isLoading } = useAuth();
+  const initialized = useRef(false);
 
+  // Check localStorage directly to avoid race condition
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [isAuthenticated, isLoading, router]);
+    if (initialized.current) return;
+    initialized.current = true;
 
+    const user = apiClient.getUser();
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [router]);
+
+  // Show loading while checking
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -29,7 +37,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!isAuthenticated) {
+  // Double-check localStorage after loading
+  const user = apiClient.getUser();
+  if (!user) {
     return null;
   }
 

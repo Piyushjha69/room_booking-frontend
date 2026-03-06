@@ -31,6 +31,8 @@ export default function MyBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'active' | 'canceled'>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'price'>('date');
 
   useEffect(() => {
     fetchBookings();
@@ -77,6 +79,32 @@ export default function MyBookingsPage() {
     }
   };
 
+  const getFilteredAndSortedBookings = () => {
+    let filtered = [...bookings];
+
+    // Apply status filter
+    if (filter === 'active') {
+      filtered = filtered.filter(b => b.bookingStatus !== 'CANCELED');
+    } else if (filter === 'canceled') {
+      filtered = filtered.filter(b => b.bookingStatus === 'CANCELED');
+    }
+
+    // Apply sorting
+    if (sortBy === 'date') {
+      filtered.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    } else if (sortBy === 'price') {
+      filtered.sort((a, b) => {
+        const priceA = (typeof a.room.pricePerNight === 'string' ? parseFloat(a.room.pricePerNight) : a.room.pricePerNight) * 
+                       getNightsCount(a.startDate, a.endDate);
+        const priceB = (typeof b.room.pricePerNight === 'string' ? parseFloat(b.room.pricePerNight) : b.room.pricePerNight) * 
+                       getNightsCount(b.startDate, b.endDate);
+        return priceB - priceA;
+      });
+    }
+
+    return filtered;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -116,7 +144,7 @@ export default function MyBookingsPage() {
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8 flex justify-between items-center">
+          <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 mb-2">
                 My Bookings
@@ -125,9 +153,32 @@ export default function MyBookingsPage() {
                 Manage and view all your reservations
               </p>
             </div>
-            <Link href="/rooms">
-              <Button>Book New Room</Button>
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/rooms">
+                <Button>Book New Room</Button>
+              </Link>
+              
+              {/* Filter Dropdown */}
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as typeof filter)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="all">All Bookings</option>
+                <option value="active">Active</option>
+                <option value="canceled">Canceled</option>
+              </select>
+
+              {/* Sort Dropdown */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="date">Sort by Date</option>
+                <option value="price">Sort by Price</option>
+              </select>
+            </div>
           </div>
 
           {/* Error Message */}
@@ -151,68 +202,85 @@ export default function MyBookingsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {bookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-                >
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center mb-4">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Room</p>
-                        <p className="font-semibold text-gray-900">
-                          {booking.room.name}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {booking.room.hotel.name}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Dates</p>
-                        <p className="font-semibold text-gray-900">
-                          {formatDate(booking.startDate)} -{" "}
-                          {formatDate(booking.endDate)}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {getNightsCount(booking.startDate, booking.endDate)} nights
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Price</p>
-                        <p className="font-semibold text-gray-900">
-                          ${(
-                            (typeof booking.room.pricePerNight === 'string'
-                              ? parseFloat(booking.room.pricePerNight)
-                              : booking.room.pricePerNight) *
-                            getNightsCount(booking.startDate, booking.endDate)
-                          ).toFixed(2)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Status</p>
-                        {getStatusBadge(booking.bookingStatus)}
-                      </div>
+              {(() => {
+                const displayBookings = getFilteredAndSortedBookings();
+                if (displayBookings.length === 0) {
+                  return (
+                    <div key="empty" className="bg-white rounded-lg shadow-md p-12 text-center">
+                      <p className="text-gray-600 mb-4">
+                        {filter === 'all' 
+                          ? 'No bookings yet' 
+                          : `No ${filter} bookings found`}
+                      </p>
+                      <Link href="/rooms">
+                        <Button>Browse Rooms</Button>
+                      </Link>
                     </div>
+                  );
+                }
+                return displayBookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                  >
+                    <div className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center mb-4">
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Room</p>
+                          <p className="font-semibold text-gray-900">
+                            {booking.room.name}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {booking.room.hotel.name}
+                          </p>
+                        </div>
 
-                    {/* Actions */}
-                    {booking.bookingStatus !== "CANCELED" && (
-                      <div className="flex gap-2 pt-4 border-t">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleCancelBooking(booking.id)}
-                          disabled={canceling === booking.id}
-                        >
-                          {canceling === booking.id ? "Canceling..." : "Cancel Booking"}
-                        </Button>
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Dates</p>
+                          <p className="font-semibold text-gray-900">
+                            {formatDate(booking.startDate)} -{" "}
+                            {formatDate(booking.endDate)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {getNightsCount(booking.startDate, booking.endDate)} nights
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Price</p>
+                          <p className="font-semibold text-gray-900">
+                            ${(
+                              (typeof booking.room.pricePerNight === 'string'
+                                ? parseFloat(booking.room.pricePerNight)
+                                : booking.room.pricePerNight) *
+                              getNightsCount(booking.startDate, booking.endDate)
+                            ).toFixed(2)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Status</p>
+                          {getStatusBadge(booking.bookingStatus)}
+                        </div>
                       </div>
-                    )}
+
+                      {/* Actions */}
+                      {booking.bookingStatus !== "CANCELED" && (
+                        <div className="flex gap-2 pt-4 border-t">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleCancelBooking(booking.id)}
+                            disabled={canceling === booking.id}
+                          >
+                            {canceling === booking.id ? "Canceling..." : "Cancel Booking"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           )}
         </div>
