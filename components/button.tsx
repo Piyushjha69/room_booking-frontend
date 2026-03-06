@@ -5,12 +5,14 @@ import { cn } from "@/lib/utils";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary";
+  size?: "sm" | "md" | "lg";
   isLoading?: boolean;
   children: React.ReactNode;
 }
 
 export function Button({
   variant = "primary",
+  size = "md",
   isLoading = false,
   disabled,
   className,
@@ -18,7 +20,12 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "w-full px-4 py-2 rounded-lg font-medium transition duration-200";
+    "rounded-lg font-medium transition duration-200";
+  const sizes = {
+    sm: "px-3 py-1 text-sm",
+    md: "w-full px-4 py-2",
+    lg: "w-full px-6 py-3 text-lg",
+  };
   const variants = {
     primary:
       "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed",
@@ -29,7 +36,7 @@ export function Button({
   return (
     <button
       disabled={disabled || isLoading}
-      className={cn(baseStyles, variants[variant], className)}
+      className={cn(baseStyles, sizes[size], variants[variant], className)}
       {...props}
     >
       {isLoading ? (

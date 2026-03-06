@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const accessToken = request.cookies.get("accessToken")?.value;
-  const { pathname } = request.nextUrl;
-
-  const authRoutes = ["/login", "/signup"];
-  const protectedRoutes = ["/dashboard"];
-
-  if (authRoutes.includes(pathname) && accessToken) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  if (protectedRoutes.some((route) => pathname.startsWith(route)) && !accessToken) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
+  // Note: Middleware runs on server, can't access localStorage
+  // Token validation happens on client via AuthContext and ProtectedRoute
+  // This middleware just allows requests to pass through
+  // Client-side auth checking in ProtectedRoute component handles redirects
+  
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/login", "/signup", "/dashboard/:path*"],
+  matcher: ["/login", "/signup", "/dashboard/:path*", "/rooms/:path*", "/book/:path*", "/my-bookings/:path*"],
 };

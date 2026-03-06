@@ -53,9 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);
-      throw err;
-    } finally {
       setIsLoading(false);
+      throw err;
     }
   };
 
@@ -69,9 +68,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);
-      throw err;
-    } finally {
       setIsLoading(false);
+      throw err;
     }
   };
 

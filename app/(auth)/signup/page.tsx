@@ -24,8 +24,13 @@ export default function SignupPage() {
 
   const onSubmit = async (data: SignupFormData) => {
     try {
+      console.log("Signup attempt for:", data.email);
       await signup(data.email, data.password, data.name);
-      router.push("/dashboard");
+      console.log("Signup successful, redirecting to dashboard");
+      // Use setTimeout to ensure state updates are processed first
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 100);
     } catch (err) {
       console.error("Signup failed:", err);
     }

@@ -156,6 +156,65 @@ class ApiClient {
     return !!this.getAccessToken();
   }
 
+  // Room API methods
+  async getAllRooms(): Promise<any[]> {
+    const response = await this.client.get<{ data: any[] }>("/rooms");
+    return response.data.data;
+  }
+
+  async getRoomById(id: string): Promise<any> {
+    const response = await this.client.get<{ data: any }>(`/rooms/${id}`);
+    return response.data.data;
+  }
+
+  async getAvailableRooms(startDate: string, endDate: string): Promise<any[]> {
+    const response = await this.client.get<{ data: any[] }>("/rooms/available", {
+      params: { startDate, endDate },
+    });
+    return response.data.data;
+  }
+
+  // Booking API methods
+  async createBooking(data: {
+    roomId: string;
+    startDate: string;
+    endDate: string;
+  }): Promise<any> {
+    const response = await this.client.post<{ data: any }>("/bookings", data);
+    return response.data.data;
+  }
+
+  async getUserBookings(): Promise<any[]> {
+    const response = await this.client.get<{ data: any[] }>("/bookings");
+    return response.data.data;
+  }
+
+  async getBookingById(id: string): Promise<any> {
+    const response = await this.client.get<{ data: any }>(`/bookings/${id}`);
+    return response.data.data;
+  }
+
+  async updateBooking(
+    id: string,
+    data: Partial<{
+      startDate: string;
+      endDate: string;
+      bookingStatus: string;
+    }>
+  ): Promise<any> {
+    const response = await this.client.patch<{ data: any }>(`/bookings/${id}`, data);
+    return response.data.data;
+  }
+
+  async cancelBooking(id: string): Promise<any> {
+    const response = await this.client.post<{ data: any }>(`/bookings/${id}/cancel`);
+    return response.data.data;
+  }
+
+  async deleteBooking(id: string): Promise<void> {
+    await this.client.delete(`/bookings/${id}`);
+  }
+
   handleError(error: unknown): ApiError {
     if (axios.isAxiosError(error)) {
       if (error.response?.data) {

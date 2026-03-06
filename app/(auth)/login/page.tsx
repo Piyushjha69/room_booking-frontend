@@ -24,8 +24,13 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
+      console.log("Login attempt for:", data.email);
       await login(data.email, data.password);
-      router.push("/dashboard");
+      console.log("Login successful, redirecting to dashboard");
+      // Use setTimeout to ensure state updates are processed first
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 100);
     } catch (err) {
       console.error("Login failed:", err);
     }
