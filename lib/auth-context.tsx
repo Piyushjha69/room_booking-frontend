@@ -8,7 +8,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<any>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   error: string | null;
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const initAuth = () => {
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (storedUser) {
             setUser(storedUser);
             setIsAuthenticated(true);
+            setIsAdmin(storedUser.role === "ADMIN");
           }
         }
       } catch (err) {
@@ -50,11 +53,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.login(email, password);
       setUser(response.user);
       setIsAuthenticated(true);
+      setIsAdmin(response.user.role === "ADMIN");
+      return response;
     } catch (err) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);
-      setIsLoading(false);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -65,11 +71,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.signup(email, password, name);
       setUser(response.user);
       setIsAuthenticated(true);
+      setIsAdmin(response.user.role === "ADMIN");
     } catch (err) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);
-      setIsLoading(false);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiClient.logout();
       setUser(null);
       setIsAuthenticated(false);
+      setIsAdmin(false);
       setError(null);
     } catch (err) {
       const apiError = apiClient.handleError(err);
@@ -97,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isAuthenticated,
         isLoading,
+        isAdmin,
         login,
         signup,
         logout,

@@ -25,11 +25,18 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       console.log("Login attempt for:", data.email);
-      await login(data.email, data.password);
-      console.log("Login successful, redirecting to dashboard");
+      const response = await login(data.email, data.password);
+      console.log("Login successful, user role:", response?.user?.role);
       // Use setTimeout to ensure state updates are processed first
       setTimeout(() => {
-        router.push("/dashboard");
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        if (user?.role === "ADMIN") {
+          console.log("Admin user detected, redirecting to admin panel");
+          router.push("/admin");
+        } else {
+          console.log("Regular user, redirecting to dashboard");
+          router.push("/dashboard");
+        }
       }, 100);
     } catch (err) {
       console.error("Login failed:", err);

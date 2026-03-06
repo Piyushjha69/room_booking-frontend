@@ -20,7 +20,27 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  role: 'ADMIN' | 'USER';
   createdAt: string;
+}
+
+export interface Hotel {
+  id: string;
+  name: string;
+  rooms: Room[];
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  pricePerNight: number | string;
+  hotelId: string;
+  hotel?: {
+    id: string;
+    name: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ApiError {
