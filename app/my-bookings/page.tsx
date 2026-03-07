@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Button } from "@/components/button";
 import { showToast } from "@/lib/toast";
+import { Modal } from "@/components/modal";
 
 interface Booking {
   id: string;
@@ -34,6 +35,8 @@ export default function MyBookingsPage() {
   const [canceling, setCanceling] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'canceled'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'price'>('date');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBookings();
@@ -55,17 +58,20 @@ export default function MyBookingsPage() {
   };
 
   const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm("Are you sure you want to cancel this booking?")) {
-      return;
-    }
+    setBookingToCancel(bookingId);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelBooking = async () => {
+    if (!bookingToCancel) return;
 
     try {
-      setCanceling(bookingId);
+      setCanceling(bookingToCancel);
       setError(null);
-      await apiClient.cancelBooking(bookingId);
+      await apiClient.cancelBooking(bookingToCancel);
       setBookings((prev) =>
         prev.map((b) =>
-          b.id === bookingId ? { ...b, bookingStatus: "CANCELED" } : b
+          b.id === bookingToCancel ? { ...b, bookingStatus: "CANCELED" } : b
         )
       );
       showToast.success('Booking canceled successfully');
@@ -75,6 +81,7 @@ export default function MyBookingsPage() {
       showToast.error(errorMsg);
     } finally {
       setCanceling(null);
+      setBookingToCancel(null);
     }
   };
 
@@ -115,19 +122,19 @@ export default function MyBookingsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusStyles: {
-      [key: string]: { bg: string; text: string; label?: string };
+      [key: string]: { bg: string; text: string; border?: string; label?: string };
     } = {
-      PENDING: { bg: "bg-yellow-100", text: "text-yellow-800" },
-      BOOKED: { bg: "bg-green-100", text: "text-green-800", label: "Confirmed" },
-      CANCELED: { bg: "bg-red-100", text: "text-red-800" },
-      AVAILABLE: { bg: "bg-blue-100", text: "text-blue-800" },
+      PENDING: { bg: "bg-yellow-500/20", text: "text-yellow-300", border: "border-yellow-500/30" },
+      BOOKED: { bg: "bg-red-500/20", text: "text-red-300", border: "border-red-500/30", label: "Confirmed" },
+      CANCELED: { bg: "bg-gray-700", text: "text-gray-400", border: "border-gray-600" },
+      AVAILABLE: { bg: "bg-blue-500/20", text: "text-blue-300", border: "border-blue-500/30" },
     };
 
     const style = statusStyles[status] || statusStyles["AVAILABLE"];
     const displayLabel = style.label || status;
 
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${style.bg} ${style.text}`}>
+      <span className={`px-3 py-1 rounded-full text-sm font-medium ${style.bg} ${style.text} ${style.border || ''} border`}>
         {displayLabel}
       </span>
     );
@@ -141,10 +148,10 @@ export default function MyBookingsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen gradient-hero py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
-            <Link href="/dashboard" className="text-blue-600 hover:text-blue-800">
+            <Link href="/dashboard" className="text-red-400 hover:text-red-300 font-medium">
               &larr; Back to Dashboard
             </Link>
           </div>
@@ -152,10 +159,10 @@ export default function MyBookingsPage() {
           {/* Header */}
           <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              <h1 className="text-4xl font-bold text-white mb-2">
                 My Bookings
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-400">
                 Manage and view all your reservations
               </p>
             </div>
@@ -168,7 +175,7 @@ export default function MyBookingsPage() {
               <select
                 value={filter}
                 onChange={(e) => setFilter(e.target.value as typeof filter)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                className="px-4 py-2 input-base bg-background-tertiary cursor-pointer"
               >
                 <option value="all">All Bookings</option>
                 <option value="active">Active</option>
@@ -179,7 +186,7 @@ export default function MyBookingsPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                className="px-4 py-2 input-base bg-background-tertiary cursor-pointer"
               >
                 <option value="date">Sort by Date</option>
                 <option value="price">Sort by Price</option>
@@ -189,21 +196,21 @@ export default function MyBookingsPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-8">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-8">
               {error}
             </div>
           )}
 
           {/* Bookings List */}
           {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Loading your bookings...</p>
+            <div className="text-center py-12 glass-card">
+              <p className="text-gray-400">Loading your bookings...</p>
             </div>
           ) : bookings.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <p className="text-gray-600 mb-4">No bookings yet</p>
+            <div className="glass-card p-12 text-center">
+              <p className="text-gray-400 mb-4">No bookings yet</p>
               <Link href="/rooms">
-                <Button>Browse Rooms</Button>
+                <Button variant="secondary" className="border-gray-600 text-gray-300 hover:bg-gray-800">Browse Rooms</Button>
               </Link>
             </div>
           ) : (
@@ -212,14 +219,14 @@ export default function MyBookingsPage() {
                 const displayBookings = getFilteredAndSortedBookings();
                 if (displayBookings.length === 0) {
                   return (
-                    <div key="empty" className="bg-white rounded-lg shadow-md p-12 text-center">
-                      <p className="text-gray-600 mb-4">
+                    <div key="empty" className="glass-card p-12 text-center">
+                      <p className="text-gray-400 mb-4">
                         {filter === 'all' 
                           ? 'No bookings yet' 
                           : `No ${filter} bookings found`}
                       </p>
                       <Link href="/rooms">
-                        <Button>Browse Rooms</Button>
+                        <Button variant="secondary" className="border-gray-600 text-gray-300 hover:bg-gray-800">Browse Rooms</Button>
                       </Link>
                     </div>
                   );
@@ -227,34 +234,34 @@ export default function MyBookingsPage() {
                 return displayBookings.map((booking) => (
                   <div
                     key={booking.id}
-                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                    className="glass-card overflow-hidden hover:shadow-lg transition-shadow"
                   >
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center mb-4">
                         <div>
-                          <p className="text-sm text-gray-600 mb-1">Room</p>
-                          <p className="font-semibold text-gray-900">
+                          <p className="text-sm text-gray-400 mb-1">Room</p>
+                          <p className="font-semibold text-white">
                             {booking.room.name}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-400">
                             {booking.room.hotel.name}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-sm text-gray-600 mb-1">Dates</p>
-                          <p className="font-semibold text-gray-900">
+                          <p className="text-sm text-gray-400 mb-1">Dates</p>
+                          <p className="font-semibold text-white">
                             {formatDate(booking.startDate)} -{" "}
                             {formatDate(booking.endDate)}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-400">
                             {getNightsCount(booking.startDate, booking.endDate)} nights
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-sm text-gray-600 mb-1">Price</p>
-                          <p className="font-semibold text-gray-900">
+                          <p className="text-sm text-gray-400 mb-1">Price</p>
+                          <p className="font-semibold text-red-400">
                             ${(
                               (typeof booking.room.pricePerNight === 'string'
                                 ? parseFloat(booking.room.pricePerNight)
@@ -265,19 +272,20 @@ export default function MyBookingsPage() {
                         </div>
 
                         <div>
-                          <p className="text-sm text-gray-600 mb-1">Status</p>
+                          <p className="text-sm text-gray-400 mb-1">Status</p>
                           {getStatusBadge(booking.bookingStatus)}
                         </div>
                       </div>
 
                       {/* Actions */}
                       {booking.bookingStatus !== "CANCELED" && (
-                        <div className="flex gap-2 pt-4 border-t">
+                        <div className="flex gap-2 pt-4 border-t border-gray-700">
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => handleCancelBooking(booking.id)}
                             disabled={canceling === booking.id}
+                            className="border-gray-600 text-gray-300 hover:bg-gray-800"
                           >
                             {canceling === booking.id ? "Canceling..." : "Cancel Booking"}
                           </Button>
@@ -291,6 +299,21 @@ export default function MyBookingsPage() {
           )}
         </div>
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => {
+          setShowCancelModal(false);
+          setBookingToCancel(null);
+        }}
+        onConfirm={confirmCancelBooking}
+        title="Cancel Booking"
+        description="Are you sure you want to cancel this booking? This action cannot be undone."
+        confirmText="Cancel Booking"
+        cancelText="Keep Booking"
+        isDestructive
+      />
     </ProtectedRoute>
   );
 }

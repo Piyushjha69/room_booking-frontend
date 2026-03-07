@@ -4,11 +4,12 @@ interface StatCardProps {
   title: string;
   value: number | string;
   icon?: React.ReactNode;
-  color?: "blue" | "green" | "purple" | "orange";
+  color?: "red" | "blue" | "green" | "purple" | "orange";
 }
 
-export function StatCard({ title, value, icon, color = "blue" }: StatCardProps) {
+export function StatCard({ title, value, icon, color = "red" }: StatCardProps) {
   const colors = {
+    red: "from-red-500 to-red-600",
     blue: "from-blue-500 to-blue-600",
     green: "from-green-500 to-green-600",
     purple: "from-purple-500 to-purple-600",
@@ -16,7 +17,7 @@ export function StatCard({ title, value, icon, color = "blue" }: StatCardProps) 
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="glass-card rounded-lg overflow-hidden">
       <div className={`bg-gradient-to-r ${colors[color]} p-6 text-white`}>
         <div className="flex items-center justify-between">
           <div>

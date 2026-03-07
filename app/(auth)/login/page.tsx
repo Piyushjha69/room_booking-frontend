@@ -1,26 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/lib/auth-context";
-import { apiClient } from "@/lib/api-client";
 import { loginSchema, LoginFormData } from "@/lib/schemas";
 import { Input } from "@/components/input";
 import { Button } from "@/components/button";
 import { AuthCard } from "@/components/auth-card";
 import { FormError } from "@/components/form-error";
-import { showToast } from "@/lib/toast";
 import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading: authLoading, error, clearError } = useAuth();
-  const [isReady, setIsReady] = useState(false);
-  const initialized = useRef(false);
-
-  // useForm must be called unconditionally (Rules of Hooks)
+  const { login, isLoading, error, clearError, isAuthenticated, user } = useAuth();
   const {
     register,
     handleSubmit,
@@ -29,47 +23,35 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  // Check if already authenticated on mount (synchronous check)
+  // redirect after context updates (or if already logged in)
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    const user = apiClient.getUser();
-    if (user) {
+    if (!isLoading && isAuthenticated && user) {
       if (user.role === "ADMIN") {
-        router.replace("/admin");
+        router.push("/admin");
       } else {
-        router.replace("/dashboard");
+        router.push("/dashboard");
       }
-    } else {
-      setIsReady(true);
     }
-  }, [router]);
+  }, [isLoading, isAuthenticated, user, router]);
 
-  // Show nothing while checking auth
-  if (!isReady) {
-    return null;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600">Checking session...</p>
+        </div>
+      </div>
+    );
   }
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       console.log("Login attempt for:", data.email);
-      const response = await login(data.email, data.password);
-      console.log("Login successful, user role:", response?.user?.role);
-      
-      showToast.success(`Welcome back, ${response?.user?.name || response?.user?.email}!`);
-      
-      setTimeout(() => {
-        if (response?.user?.role === "ADMIN") {
-          router.push("/admin");
-        } else {
-          router.push("/dashboard");
-        }
-      }, 100);
-    } catch (err: any) {
+      await login(data.email, data.password);
+      // no immediate redirect here; effect above will run when auth state changes
+    } catch (err) {
       console.error("Login failed:", err);
-      const errorMsg = err.response?.data?.message || err.message || "Login failed. Please check your credentials.";
-      showToast.error(errorMsg);
     }
   };
 
@@ -94,18 +76,18 @@ export default function LoginPage() {
           {...register("password")}
         />
 
-        <Button type="submit" isLoading={authLoading}>
+        <Button type="submit" isLoading={isLoading}>
           Sign In
         </Button>
       </form>
 
-      <div className="text-center text-sm">
-        <span className="text-slate-500 dark:text-slate-400">
+      <div className="mt-6">
+        <p className="text-center text-sm text-gray-600">
           Don't have an account?{" "}
-        </span>
-        <Link href="/signup" className="font-medium text-slate-900 hover:underline dark:text-slate-50">
-          Sign up
-        </Link>
+          <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-700">
+            Sign up
+          </Link>
+        </p>
       </div>
     </AuthCard>
   );

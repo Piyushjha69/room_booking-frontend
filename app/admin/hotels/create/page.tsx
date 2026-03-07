@@ -29,6 +29,7 @@ function CreateHotelContent() {
   );
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<ValidationError[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const addRoom = () => {
     setRooms([...rooms, { type: "", pricePerNight: "", count: "1" }]);
@@ -189,26 +190,26 @@ function CreateHotelContent() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <form onSubmit={handleSubmit}>
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              <h2 className="text-xl font-semibold text-white mb-4">
                 Hotel Information
               </h2>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Hotel Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={hotelName}
                   onChange={(e) => setHotelName(e.target.value)}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-4 py-2 border rounded-lg bg-gray-800 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent ${
                     getErrorForField("hotelName")
                       ? "border-red-500"
-                      : "border-gray-300"
+                      : "border-gray-600"
                   }`}
                   placeholder="Enter hotel name"
                 />
                 {getErrorForField("hotelName") && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="mt-1 text-sm text-red-400">
                     {getErrorForField("hotelName")}
                   </p>
                 )}

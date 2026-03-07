@@ -46,50 +46,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, []);
 
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'accessToken' || e.key === 'user') {
+        const storedUser = apiClient.getUser();
+        if (storedUser) {
+          setUser(storedUser);
+          setIsAuthenticated(true);
+          setIsAdmin(storedUser.role === "ADMIN");
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+          setIsAdmin(false);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
     setError(null);
     try {
       const response = await apiClient.login(email, password);
-      // Ensure user data is properly set in state and localStorage
       const userData = response.user;
       setUser(userData);
       setIsAuthenticated(true);
       setIsAdmin(userData.role === "ADMIN");
-      // Force a re-render by updating state
       return { ...response, user: userData };
     } catch (err) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const signup = async (email: string, password: string, name: string) => {
-    setIsLoading(true);
     setError(null);
     try {
       const response = await apiClient.signup(email, password, name);
-      // Ensure user data is properly set in state and localStorage
       const userData = response.user;
       setUser(userData);
       setIsAuthenticated(true);
       setIsAdmin(userData.role === "ADMIN");
-      // Force a re-render by updating state
       return { ...response, user: userData };
     } catch (err) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const logout = async () => {
-    setIsLoading(true);
     try {
       await apiClient.logout();
       setUser(null);
@@ -100,8 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   };
 

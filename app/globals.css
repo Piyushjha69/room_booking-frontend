@@ -86,7 +86,12 @@ body {
   padding: 0.875rem 1.25rem;
   font-size: 0.9375rem;
   transition: all 0.2s ease;
-  color: var(--text-primary);
+  color: #ffffff;
+  width: 100%;
+}
+
+.input-base::placeholder {
+  color: #9ca3af;
 }
 
 .input-base:focus {

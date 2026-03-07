@@ -24,6 +24,8 @@ function AdminHotelsContent() {
   const [showForm, setShowForm] = useState(false);
   const [hotelName, setHotelName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [hotelToDelete, setHotelToDelete] = useState<string | null>(null);
 
   const fetchHotels = async () => {
     try {
@@ -78,11 +80,16 @@ function AdminHotelsContent() {
   };
 
   const handleDeleteHotel = async (hotelId: string) => {
-    if (!confirm("Are you sure? This will delete all associated rooms.")) return;
+    setHotelToDelete(hotelId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteHotel = async () => {
+    if (!hotelToDelete) return;
 
     try {
       const token = localStorage.getItem("accessToken");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/hotels/${hotelId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/hotels/${hotelToDelete}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -127,29 +134,15 @@ function AdminHotelsContent() {
 
   return (
     <ProtectedAdminRoute>
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center">
-                <h1 className="text-2xl font-bold text-gray-900">Manage Hotels</h1>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm text-gray-600 mr-4">{user?.name || user?.email}</span>
-                <Button variant="secondary" onClick={handleLogout} className="w-auto px-4">Logout</Button>
-              </div>
-            </div>
-          </div>
-        </nav>
-
+      <div className="min-h-screen gradient-hero">
         <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
-            <Link href="/admin" className="text-blue-600 hover:text-blue-800">← Back to Dashboard</Link>
+            <Link href="/admin" className="text-red-400 hover:text-red-300 font-medium">← Back to Dashboard</Link>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="glass-card p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Hotels</h2>
+              <h2 className="text-2xl font-bold text-white">Hotels</h2>
               <Button onClick={() => router.push("/admin/hotels/create")}>Add Hotel</Button>
             </div>
 
@@ -157,32 +150,46 @@ function AdminHotelsContent() {
               isOpen={showForm}
               onClose={() => setShowForm(false)}
               title="Create Hotel"
-              footer={
-                <>
-                  <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
-                  <Button onClick={handleCreateHotel} isLoading={submitting}>Create</Button>
-                </>
-              }
+              description="Enter the name of the new hotel"
             >
               <form onSubmit={handleCreateHotel}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Hotel Name</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Hotel Name</label>
                   <input
                     type="text"
                     value={hotelName}
                     onChange={(e) => setHotelName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full input-base"
                     placeholder="Enter hotel name"
                     required
                   />
                 </div>
               </form>
+              <div className="flex gap-3 pt-4">
+                <Button variant="secondary" onClick={() => setShowForm(false)} className="flex-1">Cancel</Button>
+                <Button onClick={handleCreateHotel} isLoading={submitting} className="flex-1">Create</Button>
+              </div>
             </Modal>
 
             <DataTable columns={columns} data={hotels} actions={actions} emptyMessage="No hotels found" />
           </div>
         </main>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setHotelToDelete(null);
+        }}
+        onConfirm={confirmDeleteHotel}
+        title="Delete Hotel"
+        description="Are you sure you want to delete this hotel? This action cannot be undone and will delete all associated rooms."
+        confirmText="Delete Hotel"
+        cancelText="Cancel"
+        isDestructive
+      />
     </ProtectedAdminRoute>
   );
 }

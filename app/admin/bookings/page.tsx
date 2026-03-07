@@ -8,6 +8,7 @@ import { ProtectedAdminRoute } from "@/components/protected-admin-route";
 import { Button } from "@/components/button";
 import { DataTable } from "@/components/data-table";
 import { showToast } from "@/lib/toast";
+import { Modal } from "@/components/modal";
 
 interface Booking {
   id: string;
@@ -36,6 +37,8 @@ function AdminBookingsContent() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<string | null>(null);
 
   const fetchBookings = async () => {
     try {
@@ -59,11 +62,16 @@ function AdminBookingsContent() {
   }, []);
 
   const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm("Are you sure you want to cancel this booking?")) return;
+    setBookingToCancel(bookingId);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelBooking = async () => {
+    if (!bookingToCancel) return;
 
     try {
       const token = localStorage.getItem("accessToken");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/${bookingId}/cancel`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/${bookingToCancel}/cancel`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -190,6 +198,21 @@ function AdminBookingsContent() {
           </div>
         </main>
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => {
+          setShowCancelModal(false);
+          setBookingToCancel(null);
+        }}
+        onConfirm={confirmCancelBooking}
+        title="Cancel Booking"
+        description="Are you sure you want to cancel this booking? This action cannot be undone."
+        confirmText="Cancel Booking"
+        cancelText="Keep Booking"
+        isDestructive
+      />
     </ProtectedAdminRoute>
   );
 }

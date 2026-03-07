@@ -1,26 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/lib/auth-context";
-import { apiClient } from "@/lib/api-client";
 import { signupSchema, SignupFormData } from "@/lib/schemas";
 import { Input } from "@/components/input";
 import { Button } from "@/components/button";
 import { AuthCard } from "@/components/auth-card";
 import { FormError } from "@/components/form-error";
-import { showToast } from "@/lib/toast";
 import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup, isLoading: authLoading, error, clearError } = useAuth();
-  const [isReady, setIsReady] = useState(false);
-  const initialized = useRef(false);
-
-  // useForm must be called unconditionally (Rules of Hooks)
+  const { signup, isLoading, error, clearError, isAuthenticated, user } = useAuth();
   const {
     register,
     handleSubmit,
@@ -29,47 +23,35 @@ export default function SignupPage() {
     resolver: zodResolver(signupSchema),
   });
 
-  // Check if already authenticated on mount (synchronous check)
+  // redirect after signup completes
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    const user = apiClient.getUser();
-    if (user) {
+    if (!isLoading && isAuthenticated && user) {
       if (user.role === "ADMIN") {
-        router.replace("/admin");
+        router.push("/admin");
       } else {
-        router.replace("/dashboard");
+        router.push("/dashboard");
       }
-    } else {
-      setIsReady(true);
     }
-  }, [router]);
+  }, [isLoading, isAuthenticated, user, router]);
 
-  // Show nothing while checking auth
-  if (!isReady) {
-    return null;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600">Checking session...</p>
+        </div>
+      </div>
+    );
   }
 
   const onSubmit = async (data: SignupFormData) => {
     try {
       console.log("Signup attempt for:", data.email);
-      const response = await signup(data.email, data.password, data.name);
-      console.log("Signup successful, user role:", response?.user?.role);
-      
-      showToast.success(`Welcome aboard, ${response?.user?.name}! Your account has been created.`);
-      
-      setTimeout(() => {
-        if (response?.user?.role === "ADMIN") {
-          router.push("/admin");
-        } else {
-          router.push("/dashboard");
-        }
-      }, 100);
-    } catch (err: any) {
+      await signup(data.email, data.password, data.name);
+      // redirect happens via effect above
+    } catch (err) {
       console.error("Signup failed:", err);
-      const errorMsg = err.response?.data?.message || err.message || "Signup failed. Please try again.";
-      showToast.error(errorMsg);
     }
   };
 
@@ -110,18 +92,18 @@ export default function SignupPage() {
           {...register("confirmPassword")}
         />
 
-        <Button type="submit" isLoading={authLoading}>
+        <Button type="submit" isLoading={isLoading}>
           Create Account
         </Button>
       </form>
 
-      <div className="text-center text-sm">
-        <span className="text-slate-500 dark:text-slate-400">
+      <div className="mt-6">
+        <p className="text-center text-sm text-gray-600">
           Already have an account?{" "}
-        </span>
-        <Link href="/login" className="font-medium text-slate-900 hover:underline dark:text-slate-50">
-          Sign in
-        </Link>
+          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-700">
+            Sign in
+          </Link>
+        </p>
       </div>
     </AuthCard>
   );

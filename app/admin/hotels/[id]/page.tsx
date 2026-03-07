@@ -33,6 +33,8 @@ function AdminHotelDetailContent() {
   const [showRoomForm, setShowRoomForm] = useState(false);
   const [roomData, setRoomData] = useState({ name: "", pricePerNight: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
 
   const fetchHotel = async () => {
     try {
@@ -93,11 +95,16 @@ function AdminHotelDetailContent() {
   };
 
   const handleDeleteRoom = async (roomId: string) => {
-    if (!confirm("Are you sure you want to delete this room?")) return;
+    setRoomToDelete(roomId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteRoom = async () => {
+    if (!roomToDelete) return;
 
     try {
       const token = localStorage.getItem("accessToken");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rooms/${roomId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rooms/${roomToDelete}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -196,24 +203,24 @@ function AdminHotelDetailContent() {
             >
               <form onSubmit={handleCreateRoom}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Room Name</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Room Name</label>
                   <input
                     type="text"
                     value={roomData.name}
                     onChange={(e) => setRoomData({ ...roomData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     placeholder="e.g., Deluxe Room"
                     required
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Price Per Night ($)</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Price Per Night ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={roomData.pricePerNight}
                     onChange={(e) => setRoomData({ ...roomData, pricePerNight: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     placeholder="0.00"
                     required
                   />
@@ -230,6 +237,21 @@ function AdminHotelDetailContent() {
           </div>
         </main>
       </div>
+
+      {/* Delete Room Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setRoomToDelete(null);
+        }}
+        onConfirm={confirmDeleteRoom}
+        title="Delete Room"
+        description="Are you sure you want to delete this room? This action cannot be undone."
+        confirmText="Delete Room"
+        cancelText="Cancel"
+        isDestructive
+      />
     </ProtectedAdminRoute>
   );
 }

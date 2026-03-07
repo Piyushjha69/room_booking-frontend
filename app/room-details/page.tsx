@@ -178,8 +178,8 @@ function RoomDetailsContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Loading room types...</p>
+      <div className="min-h-screen flex items-center justify-center gradient-hero">
+        <p className="text-gray-400">Loading room types...</p>
       </div>
     );
   }
@@ -187,10 +187,10 @@ function RoomDetailsContent() {
   if (error && !roomTypes.length) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen flex flex-col items-center justify-center">
-          <p className="text-red-600 mb-4">{error}</p>
+        <div className="min-h-screen flex flex-col items-center justify-center gradient-hero">
+          <p className="text-red-400 mb-4">{error}</p>
           <Link href="/rooms">
-            <Button>Back to Hotels</Button>
+            <Button variant="secondary" className="border-gray-600 text-gray-300 hover:bg-gray-800">Back to Hotels</Button>
           </Link>
         </div>
       </ProtectedRoute>
@@ -199,10 +199,10 @@ function RoomDetailsContent() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen gradient-hero py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-10">
-            <Link href="/rooms" className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium group transition-colors">
+            <Link href="/rooms" className="inline-flex items-center text-red-400 hover:text-red-300 font-medium group transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 group-hover:-translate-x-1 transition-transform">
                 <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
               </svg>
@@ -210,15 +210,15 @@ function RoomDetailsContent() {
             </Link>
           </div>
           <div className="mb-10">
-            <h1 className="text-5xl font-bold text-slate-900 mb-3 tracking-tight">Room Types</h1>
-            <p className="text-lg text-slate-600">Select a room type to book your stay</p>
+            <h1 className="text-5xl font-bold text-white mb-3 tracking-tight">Room Types</h1>
+            <p className="text-lg text-gray-400">Select a room type to book your stay</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-8 mb-10 border border-slate-100">
-            <h3 className="text-xl font-bold text-slate-900 mb-6">Select Your Dates</h3>
+          <div className="glass-card rounded-2xl p-8 mb-10">
+            <h3 className="text-xl font-bold text-white mb-6">Select Your Dates</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
                   Check-in Date
                 </label>
                 <input
@@ -235,11 +235,11 @@ function RoomDetailsContent() {
                     }
                   }}
                   min={today}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  className="w-full input-base"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
                   Check-out Date
                 </label>
                 <input
@@ -256,7 +256,7 @@ function RoomDetailsContent() {
                     }
                   }}
                   min={startDate || today}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  className="w-full input-base"
                 />
               </div>
               <div className="flex items-end gap-3">
@@ -285,7 +285,7 @@ function RoomDetailsContent() {
                       fetchRoomTypes();
                     }}
                     variant="secondary"
-                    className="px-6 py-3"
+                    className="px-6 py-3 border-gray-600 text-gray-300 hover:bg-gray-800"
                   >
                     Clear
                   </Button>
@@ -295,16 +295,16 @@ function RoomDetailsContent() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-8">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-8">
               {error}
             </div>
           )}
 
           {roomTypes.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <p className="text-gray-600 mb-4">No rooms available for selected dates</p>
+            <div className="glass-card rounded-lg p-12 text-center">
+              <p className="text-gray-400 mb-4">No rooms available for selected dates</p>
               <Link href="/rooms">
-                <Button>Browse Other Hotels</Button>
+                <Button variant="secondary" className="border-gray-600 text-gray-300 hover:bg-gray-800">Browse Other Hotels</Button>
               </Link>
             </div>
           ) : (
@@ -314,7 +314,7 @@ function RoomDetailsContent() {
                 return (
                 <div
                   key={roomType.roomType}
-                  className={`bg-white rounded-lg shadow-md overflow-hidden flex flex-col ${isSoldOut ? 'opacity-60' : ''}`}
+                  className={`glass-card overflow-hidden flex flex-col ${isSoldOut ? 'opacity-60' : ''}`}
                 >
                   <div className={`bg-gradient-to-r ${getGradientForRoomType(roomType.roomType)} h-32 flex items-center justify-center`}>
                     <div className="text-white text-center p-4">
@@ -325,26 +325,26 @@ function RoomDetailsContent() {
                   <div className="flex-1 p-6 flex flex-col">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-4">
-                        <p className={`text-3xl font-bold ${isSoldOut ? 'text-gray-400' : 'text-green-600'}`}>
+                        <p className={`text-3xl font-bold ${isSoldOut ? 'text-gray-500' : 'text-red-400'}`}>
                           ${roomType.pricePerNight.toFixed(2)}
-                          <span className="text-sm font-normal text-gray-600">/night</span>
+                          <span className="text-sm font-normal text-gray-400">/night</span>
                         </p>
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                           roomType.availableRooms > 0 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                            : 'bg-gray-700 text-gray-400 border border-gray-600'
                         }`}>
                           {roomType.availableRooms > 0 ? `${roomType.availableRooms} available` : 'Sold Out'}
                         </span>
                       </div>
 
                       {isSoldOut && (
-                        <p className="text-sm text-red-600 mb-4">
+                        <p className="text-sm text-red-400 mb-4">
                           No rooms available for selected dates
                         </p>
                       )}
                       {!isSoldOut && startDate && endDate && roomType.availableRooms > 0 && (
-                        <p className="text-sm text-green-600 mb-4">
+                        <p className="text-sm text-green-400 mb-4">
                           {roomType.availableRooms} room(s) available for your dates
                         </p>
                       )}

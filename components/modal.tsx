@@ -1,36 +1,103 @@
-"use client";
+'use client';
+
+import { useEffect, ReactNode } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onConfirm?: () => void;
   title: string;
-  children: React.ReactNode;
-  footer?: React.ReactNode;
+  description?: string;
+  confirmText?: string;
+  cancelText?: string;
+  isDestructive?: boolean;
+  children?: ReactNode;
+  footer?: ReactNode;
 }
 
-export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  isDestructive = false,
+  children,
+  footer,
+}: ModalProps) {
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={onClose} />
-        
-        <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              ✕
-            </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative glass-card max-w-md w-full mx-4 p-6 animate-fade-in-up">
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold text-white">{title}</h3>
+            {description && (
+              <p className="text-gray-400">{description}</p>
+            )}
           </div>
-          
-          <div className="mt-2">{children}</div>
-          
-          {footer && (
-            <div className="mt-4 flex justify-end gap-2">{footer}</div>
+
+          {/* Children (for forms) */}
+          {children && <div>{children}</div>}
+
+          {/* Footer */}
+          {(footer || onConfirm) && (
+            <div className="flex gap-3 pt-4">
+              {footer ? (
+                footer
+              ) : (
+                <>
+                  <button
+                    onClick={onClose}
+                    className="flex-1 btn-secondary border-gray-600 text-gray-300 hover:bg-gray-800"
+                  >
+                    {cancelText}
+                  </button>
+                  {onConfirm && (
+                    <button
+                      onClick={() => {
+                        onConfirm();
+                        onClose();
+                      }}
+                      className={`flex-1 btn-primary ${
+                        isDestructive ? 'bg-red-600 hover:bg-red-700' : ''
+                      }`}
+                    >
+                      {confirmText}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useRef } from "react";
-import { apiClient } from "@/lib/api-client";
+import { useEffect } from "react";
 
 interface ProtectedAdminRouteProps {
   children: React.ReactNode;
@@ -11,33 +10,30 @@ interface ProtectedAdminRouteProps {
 
 export function ProtectedAdminRoute({ children }: ProtectedAdminRouteProps) {
   const router = useRouter();
-  const { isLoading } = useAuth();
-  const initialized = useRef(false);
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
 
-  // Check localStorage directly to avoid race condition
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    const user = apiClient.getUser();
-    if (!user) {
-      router.replace("/login");
-    } else if (user.role !== "ADMIN") {
-      router.replace("/dashboard");
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.replace("/login");
+      } else if (!isAdmin) {
+        router.replace("/dashboard");
+      }
     }
-  }, [router]);
+  }, [isAuthenticated, isAdmin, isLoading, router]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-600">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  // Double-check localStorage after loading
-  const user = apiClient.getUser();
-  if (!user || user.role !== "ADMIN") {
+  if (!isAuthenticated || !isAdmin) {
     return null;
   }
 

@@ -171,16 +171,16 @@ export default function RoomsPage() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getPaginatedHotels().map((hotel) => (
-                  <Link href={`/room-details?hotelId=${hotel.id}`} key={hotel.id}>
-                    <div className="glass-card overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer h-full group">
+                  <Link href={`/room-details?hotelId=${hotel.id}`} key={hotel.id} className="h-full">
+                    <div className="glass-card overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer h-full group flex flex-col">
                       <div className={`bg-gradient-to-r ${getGradientForHotel(hotel.id)} h-40 flex items-center justify-center relative overflow-hidden`}>
                         <div className="absolute inset-0 bg-black opacity-10"></div>
                         <div className="text-white text-center z-10 px-6 transform group-hover:scale-105 transition-transform duration-300">
                           <p className="text-2xl font-bold tracking-tight">{hotel.name}</p>
                         </div>
                       </div>
-                      <div className="p-6 space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
+                      <div className="p-6 flex flex-col flex-1">
+                        <div className="grid grid-cols-2 gap-3 mb-4">
                           <div className="bg-gradient-to-br from-red-500/20 to-red-700/20 rounded-xl p-3 text-center border border-red-500/30">
                             <div className="flex items-center justify-center gap-1 mb-1">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
@@ -204,7 +204,7 @@ export default function RoomsPage() {
                         </div>
                         
                         {hotel.roomTypes && hotel.roomTypes.length > 0 ? (
-                          <div>
+                          <div className="flex-1">
                             <div className="flex text-xs font-bold text-gray-400 uppercase tracking-wide border-b border-gray-700 pb-2 mb-3">
                               <span className="flex-1">Room Type</span>
                               <span className="w-16 text-center">Rooms</span>
@@ -222,18 +222,18 @@ export default function RoomsPage() {
                               ))}
                             </div>
                             {hotel.roomTypes.length > 3 && (
-                              <p className="text-xs text-gray-500 text-center mt-3 pt-3 border-t border-gray-700">
+                              <p className="text-xs gray-500 text-center mt-3 pt-3 border-t border-gray-700">
                                 +{hotel.roomTypes.length - 3} more room types
                               </p>
                             )}
                           </div>
                         ) : (
-                          <div className="text-center py-6 text-gray-500 text-sm mb-5 bg-background-tertiary rounded-xl">
+                          <div className="flex-1 text-center py-6 text-gray-500 text-sm bg-background-tertiary rounded-xl">
                             No rooms available
                           </div>
                         )}
                         
-                        <Button className="w-full py-3 text-base font-semibold">
+                        <Button className="w-full py-3 text-base font-semibold mt-4">
                           View Rooms
                         </Button>
                       </div>
