@@ -7,106 +7,96 @@ import Link from "next/link";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Button } from "@/components/button";
 
-interface Room {
+interface Hotel {
   id: string;
   name: string;
-  pricePerNight: string | number;
-  hotel: {
+  rooms: Array<{
     id: string;
     name: string;
-  };
-  createdAt: string;
-  updatedAt: string;
+    pricePerNight: string | number;
+  }>;
 }
+
+// Generate consistent gradient colors based on hotel ID
+const getGradientForHotel = (id: string) => {
+  const gradients = [
+    'from-blue-500 to-blue-600',
+    'from-purple-500 to-purple-600',
+    'from-green-500 to-green-600',
+    'from-orange-500 to-orange-600',
+    'from-pink-500 to-pink-600',
+    'from-indigo-500 to-indigo-600',
+    'from-teal-500 to-teal-600',
+    'from-red-500 to-red-600',
+  ];
+  
+  const index = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % gradients.length;
+  return gradients[index];
+};
+
+const ITEMS_PER_PAGE = 6;
 
 export default function RoomsPage() {
   const { user } = useAuth();
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [allRooms, setAllRooms] = useState<Room[]>([]); // Store all rooms for client-side filtering
+  const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [filtering, setFiltering] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [priceRange, setPriceRange] = useState<'all' | 'budget' | 'mid' | 'luxury'>('all');
 
   useEffect(() => {
-    fetchRooms();
+    fetchHotels();
   }, []);
 
-  const fetchRooms = async () => {
+  const fetchHotels = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiClient.getAllRooms();
-      setRooms(data);
-      setAllRooms(data);
+      const data = await apiClient.getAllHotels();
+      setHotels(data);
     } catch (err: any) {
       const errorMsg =
-        err.response?.data?.message || err.message || "Failed to fetch rooms";
+        err.response?.data?.message || err.message || "Failed to fetch hotels";
       setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFilterByAvailability = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!startDate || !endDate) {
-      setError("Please select both start and end dates");
-      return;
-    }
-
-    try {
-      setFiltering(true);
-      setError(null);
-      const data = await apiClient.getAvailableRooms(startDate, endDate);
-      setRooms(data);
-    } catch (err: any) {
-      const errorMsg =
-        err.response?.data?.message || err.message || "Failed to filter rooms";
-      setError(errorMsg);
-    } finally {
-      setFiltering(false);
-    }
+  const getFilteredHotels = () => {
+    if (!searchTerm) return hotels;
+    return hotels.filter(hotel => 
+      hotel.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   };
 
-  const handleReset = () => {
-    setStartDate("");
-    setEndDate("");
-    setSearchTerm("");
-    setPriceRange('all');
-    fetchRooms();
+  const getPaginatedHotels = () => {
+    const filtered = getFilteredHotels();
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filtered.slice(startIndex, endIndex);
   };
 
-  const getFilteredRooms = () => {
-    let filtered = [...rooms];
+  const totalPages = Math.ceil(getFilteredHotels().length / ITEMS_PER_PAGE);
 
-    // Apply search term filter
-    if (searchTerm) {
-      filtered = filtered.filter(room => 
-        room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        room.hotel.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  const getMinPrice = (hotel: Hotel) => {
+    if (!hotel.rooms || hotel.rooms.length === 0) return 0;
+    const prices = hotel.rooms.map(r => 
+      typeof r.pricePerNight === 'string' ? parseFloat(r.pricePerNight) : r.pricePerNight
+    );
+    return Math.min(...prices);
+  };
 
-    // Apply price range filter
-    if (priceRange !== 'all') {
-      filtered = filtered.filter(room => {
-        const price = typeof room.pricePerNight === 'string' 
-          ? parseFloat(room.pricePerNight) 
-          : room.pricePerNight;
-        
-        if (priceRange === 'budget') return price < 100;
-        if (priceRange === 'mid') return price >= 100 && price < 200;
-        if (priceRange === 'luxury') return price >= 200;
-        return true;
-      });
-    }
+  const getMaxPrice = (hotel: Hotel) => {
+    if (!hotel.rooms || hotel.rooms.length === 0) return 0;
+    const prices = hotel.rooms.map(r => 
+      typeof r.pricePerNight === 'string' ? parseFloat(r.pricePerNight) : r.pricePerNight
+    );
+    return Math.max(...prices);
+  };
 
-    return filtered;
+  const getRoomCount = (hotel: Hotel) => {
+    return hotel.rooms?.length || 0;
   };
 
   return (
@@ -116,84 +106,41 @@ export default function RoomsPage() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Available Rooms
+              Browse Hotels
             </h1>
             <p className="text-gray-600">
-              Find and book the perfect room for your stay
+              Select a hotel to view available rooms and book your stay
             </p>
           </div>
 
-          {/* Filter Section */}
+          {/* Search Section */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <form onSubmit={handleFilterByAvailability}>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Check-in Date
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Check-out Date
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Search
-                  </label>
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Room or hotel name"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price Range
-                  </label>
-                  <select
-                    value={priceRange}
-                    onChange={(e) => setPriceRange(e.target.value as typeof priceRange)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                  >
-                    <option value="all">All Prices</option>
-                    <option value="budget">Budget (&lt;$100)</option>
-                    <option value="mid">Mid-Range ($100-$200)</option>
-                    <option value="luxury">Luxury ($200+)</option>
-                  </select>
-                </div>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Search hotels by name..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  disabled={filtering}
-                  className="flex-1"
-                >
-                  {filtering ? "Filtering..." : "Search Availability"}
-                </Button>
+              {searchTerm && (
                 <Button
                   type="button"
-                  onClick={handleReset}
+                  onClick={() => {
+                    setSearchTerm("");
+                    setCurrentPage(1);
+                  }}
                   variant="secondary"
                 >
-                  Reset All
+                  Clear
                 </Button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
 
           {/* Error Message */}
@@ -203,67 +150,95 @@ export default function RoomsPage() {
             </div>
           )}
 
-          {/* Rooms Grid */}
+          {/* Hotels Grid */}
           {loading ? (
             <div className="text-center py-12">
-              <p className="text-gray-600">Loading rooms...</p>
+              <p className="text-gray-600">Loading hotels...</p>
             </div>
-          ) : rooms.length === 0 ? (
+          ) : hotels.length === 0 ? (
             <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <p className="text-gray-600 mb-4">No rooms available</p>
-              <Button onClick={handleReset} variant="secondary">
-                View all rooms
+              <p className="text-gray-600 mb-4">No hotels available</p>
+              <Button onClick={fetchHotels} variant="secondary">
+                Refresh
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(() => {
-                const filteredRooms = getFilteredRooms();
-                if (filteredRooms.length === 0) {
-                  return (
-                    <div className="col-span-full bg-white rounded-lg shadow-md p-12 text-center">
-                      <p className="text-gray-600 mb-4">
-                        {searchTerm || priceRange !== 'all'
-                          ? 'No rooms match your filters'
-                          : 'No rooms available'}
-                      </p>
-                      <Button onClick={handleReset} variant="secondary">
-                        View all rooms
-                      </Button>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {getPaginatedHotels().map((hotel) => (
+                  <Link href={`/room-details?hotelId=${hotel.id}`} key={hotel.id}>
+                    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
+                      <div className={`bg-gradient-to-r ${getGradientForHotel(hotel.id)} h-32 flex items-center justify-center relative`}>
+                        <div className="absolute inset-0 bg-black opacity-10"></div>
+                        <div className="text-white text-center z-10 px-4">
+                          <p className="text-xl font-bold">{hotel.name}</p>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          <div className="bg-gray-50 rounded-lg p-2 text-center">
+                            <p className="text-xs text-gray-500">Rooms</p>
+                            <p className="text-lg font-bold text-gray-900">{getRoomCount(hotel)}</p>
+                          </div>
+                          <div className="bg-gray-50 rounded-lg p-2 text-center">
+                            <p className="text-xs text-gray-500">Price Range</p>
+                            <p className="text-lg font-bold text-green-600">
+                              ${getMinPrice(hotel)} - ${getMaxPrice(hotel)}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Room Types Preview */}
+                        <div className="space-y-1 mb-4">
+                          {hotel.rooms.slice(0, 3).map((room, idx) => (
+                            <div key={idx} className="flex justify-between text-sm">
+                              <span className="text-gray-600">{room.name}</span>
+                              <span className="font-semibold text-blue-600">
+                                ${typeof room.pricePerNight === 'string' 
+                                  ? parseFloat(room.pricePerNight).toFixed(2)
+                                  : room.pricePerNight.toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                          {hotel.rooms.length > 3 && (
+                            <p className="text-xs text-gray-500 text-center">
+                              +{hotel.rooms.length - 3} more rooms
+                            </p>
+                          )}
+                        </div>
+                        
+                        <Button className="w-full">
+                          View Rooms
+                        </Button>
+                      </div>
                     </div>
-                  );
-                }
-                return filteredRooms.map((room) => (
-                  <div
-                    key={room.id}
-                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                  </Link>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-8">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
                   >
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-40 flex items-center justify-center">
-                      <div className="text-white text-center">
-                        <p className="text-lg font-semibold">{room.name}</p>
-                        <p className="text-sm opacity-90">
-                          {room.hotel.name}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-6">
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-600 mb-1">Price per night</p>
-                        <p className="text-3xl font-bold text-blue-600">
-                          ${typeof room.pricePerNight === 'string' 
-                            ? parseFloat(room.pricePerNight).toFixed(2)
-                            : room.pricePerNight.toFixed(2)
-                          }
-                        </p>
-                      </div>
-                      <Link href={`/book?roomId=${room.id}`}>
-                        <Button className="w-full">Book Now</Button>
-                      </Link>
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
+                    Previous
+                  </Button>
+                  <span className="text-gray-600">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

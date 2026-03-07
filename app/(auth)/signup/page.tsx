@@ -55,12 +55,16 @@ export default function SignupPage() {
       console.log("Signup attempt for:", data.email);
       const response = await signup(data.email, data.password, data.name);
       console.log("Signup successful, user role:", response?.user?.role);
-      // Redirect based on user role
-      if (response?.user?.role === "ADMIN") {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+      
+      // Small delay to ensure state is properly set before navigation
+      setTimeout(() => {
+        // Redirect based on user role
+        if (response?.user?.role === "ADMIN") {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
+      }, 100);
     } catch (err) {
       console.error("Signup failed:", err);
     }
@@ -108,13 +112,13 @@ export default function SignupPage() {
         </Button>
       </form>
 
-      <div className="mt-6">
-        <p className="text-center text-sm text-gray-600">
+      <div className="text-center text-sm">
+        <span className="text-slate-500 dark:text-slate-400">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-700">
-            Sign in
-          </Link>
-        </p>
+        </span>
+        <Link href="/login" className="font-medium text-slate-900 hover:underline dark:text-slate-50">
+          Sign in
+        </Link>
       </div>
     </AuthCard>
   );

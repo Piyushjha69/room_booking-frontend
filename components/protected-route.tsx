@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
-  const { isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const initialized = useRef(false);
 
   // Check localStorage directly to avoid race condition
@@ -19,13 +19,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (initialized.current) return;
     initialized.current = true;
 
-    const user = apiClient.getUser();
-    if (!user) {
+    const storedUser = apiClient.getUser();
+    if (!storedUser) {
       router.replace("/login");
     }
   }, [router]);
 
-  // Show loading while checking
+  // Show loading while checking auth
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -37,10 +37,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Double-check localStorage after loading
-  const user = apiClient.getUser();
-  if (!user) {
-    return null;
+  // If not authenticated, check localStorage
+  if (!isAuthenticated) {
+    const storedUser = apiClient.getUser();
+    if (!storedUser) {
+      return null;
+    }
   }
 
   return <>{children}</>;

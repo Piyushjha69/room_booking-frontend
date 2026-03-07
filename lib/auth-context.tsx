@@ -51,10 +51,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const response = await apiClient.login(email, password);
-      setUser(response.user);
+      // Ensure user data is properly set in state and localStorage
+      const userData = response.user;
+      setUser(userData);
       setIsAuthenticated(true);
-      setIsAdmin(response.user.role === "ADMIN");
-      return response;
+      setIsAdmin(userData.role === "ADMIN");
+      // Force a re-render by updating state
+      return { ...response, user: userData };
     } catch (err) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);
@@ -69,10 +72,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const response = await apiClient.signup(email, password, name);
-      setUser(response.user);
+      // Ensure user data is properly set in state and localStorage
+      const userData = response.user;
+      setUser(userData);
       setIsAuthenticated(true);
-      setIsAdmin(response.user.role === "ADMIN");
-      return response;
+      setIsAdmin(userData.role === "ADMIN");
+      // Force a re-render by updating state
+      return { ...response, user: userData };
     } catch (err) {
       const apiError = apiClient.handleError(err);
       setError(apiError.message);

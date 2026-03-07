@@ -55,12 +55,16 @@ export default function LoginPage() {
       console.log("Login attempt for:", data.email);
       const response = await login(data.email, data.password);
       console.log("Login successful, user role:", response?.user?.role);
-      // Redirect based on user role
-      if (response?.user?.role === "ADMIN") {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+      
+      // Small delay to ensure state is properly set before navigation
+      setTimeout(() => {
+        // Redirect based on user role
+        if (response?.user?.role === "ADMIN") {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
+      }, 100);
     } catch (err) {
       console.error("Login failed:", err);
     }
@@ -92,13 +96,13 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <div className="mt-6">
-        <p className="text-center text-sm text-gray-600">
+      <div className="text-center text-sm">
+        <span className="text-slate-500 dark:text-slate-400">
           Don't have an account?{" "}
-          <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-700">
-            Sign up
-          </Link>
-        </p>
+        </span>
+        <Link href="/signup" className="font-medium text-slate-900 hover:underline dark:text-slate-50">
+          Sign up
+        </Link>
       </div>
     </AuthCard>
   );

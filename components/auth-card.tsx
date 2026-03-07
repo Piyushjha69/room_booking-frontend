@@ -8,15 +8,21 @@ interface AuthCardProps {
 
 export function AuthCard({ title, description, children }: AuthCardProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-[350px] space-y-6">
+        <div className="flex flex-col space-y-2 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {title}
+          </h1>
           {description && (
-            <p className="mt-2 text-gray-600 text-sm">{description}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {description}
+            </p>
           )}
         </div>
-        {children}
+        <div className="grid gap-6">
+          {children}
+        </div>
       </div>
     </div>
   );

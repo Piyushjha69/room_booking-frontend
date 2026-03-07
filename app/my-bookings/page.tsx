@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Button } from "@/components/button";
+import { useToast } from "@/components/toast";
 
 interface Booking {
   id: string;
@@ -27,6 +28,7 @@ interface Booking {
 
 export default function MyBookingsPage() {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export default function MyBookingsPage() {
       const errorMsg =
         err.response?.data?.message || err.message || "Failed to fetch bookings";
       setError(errorMsg);
+      addToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -68,12 +71,14 @@ export default function MyBookingsPage() {
           b.id === bookingId ? { ...b, bookingStatus: "CANCELED" } : b
         )
       );
+      addToast('Booking canceled successfully', 'success');
     } catch (err: any) {
       const errorMsg =
         err.response?.data?.message ||
         err.message ||
         "Failed to cancel booking";
       setError(errorMsg);
+      addToast(errorMsg, 'error');
     } finally {
       setCanceling(null);
     }
@@ -119,16 +124,17 @@ export default function MyBookingsPage() {
       [key: string]: { bg: string; text: string };
     } = {
       PENDING: { bg: "bg-yellow-100", text: "text-yellow-800" },
-      BOOKED: { bg: "bg-green-100", text: "text-green-800" },
+      BOOKED: { bg: "bg-green-100", text: "text-green-800", label: "Confirmed" },
       CANCELED: { bg: "bg-red-100", text: "text-red-800" },
       AVAILABLE: { bg: "bg-blue-100", text: "text-blue-800" },
     };
 
     const style = statusStyles[status] || statusStyles["AVAILABLE"];
+    const displayLabel = style.label || status;
 
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-medium ${style.bg} ${style.text}`}>
-        {status}
+        {displayLabel}
       </span>
     );
   };

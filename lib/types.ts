@@ -43,6 +43,14 @@ export interface Room {
   updatedAt?: string;
 }
 
+export interface RoomType {
+  roomType: string;
+  pricePerNight: number;
+  availableRooms: number;
+  hotelId: string;
+  hotelName: string;
+}
+
 export interface ApiError {
   message: string;
   code?: string;
