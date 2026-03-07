@@ -5,16 +5,19 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 
-interface Room {
-  id: string;
-  name: string;
-  pricePerNight: number | string;
+interface RoomTypeGroup {
+  type: string;
+  count: number;
+  pricePerNight: number;
 }
 
 interface Hotel {
   id: string;
   name: string;
-  rooms?: Room[];
+  totalRooms: number;
+  minPrice: number;
+  maxPrice: number;
+  roomTypes: RoomTypeGroup[];
 }
 
 export default function Home() {
@@ -40,20 +43,7 @@ export default function Home() {
     fetchHotels();
   }, [pathname]);
 
-  const getHotelStats = (hotel: Hotel) => {
-    const rooms = hotel.rooms || [];
-    const prices = rooms.map(r => Number(r.pricePerNight));
-    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-    const roomTypes = [...new Set(rooms.map(r => r.name.replace(/\s+\d+$/, '').trim()))];
-    return {
-      roomCount: rooms.length,
-      minPrice,
-      maxPrice,
-      roomTypes: roomTypes.slice(0, 3),
-      moreTypes: roomTypes.length > 3 ? roomTypes.length - 3 : 0
-    };
-  };
+
 
   return (
     <div className="gradient-hero min-h-screen">
@@ -161,61 +151,56 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredHotels.map((hotel) => {
-                const stats = getHotelStats(hotel);
-                return (
-                  <Link key={hotel.id} href={`/rooms?hotelId=${hotel.id}`} className="group h-full">
-                    <div className="glass-card p-6 h-full flex flex-col">
-                      <div className="bg-gradient-to-br from-red-500/20 to-red-700/20 rounded-xl p-4 mb-4">
-                        <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                      </div>
-                      <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-red-400 transition-colors">{hotel.name}</h3>
-                      
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-background-tertiary rounded-lg p-3">
-                          <p className="text-xs text-gray-400">Rooms</p>
-                          <p className="text-xl font-bold text-white">{stats.roomCount}</p>
-                        </div>
-                        <div className="bg-background-tertiary rounded-lg p-3">
-                          <p className="text-xs text-gray-400">Price Range</p>
-                          <p className="text-lg font-bold text-red-400">
-                            {stats.minPrice === stats.maxPrice 
-                              ? `$${stats.minPrice}` 
-                              : `$${stats.minPrice} – $${stats.maxPrice}`}
-                          </p>
-                        </div>
-                      </div>
-
-                      {stats.roomTypes.length > 0 ? (
-                        <div className="flex-1 flex flex-col">
-                          <p className="text-xs text-gray-500 uppercase mb-2">Room Types</p>
-                          <div className="space-y-1">
-                            {stats.roomTypes.map((type, idx) => (
-                              <div key={idx} className="flex justify-between text-sm">
-                                <span className="text-gray-300">{type}</span>
-                                <span className="text-red-400 font-medium">
-                                  ${hotel.rooms?.find(r => r.name.includes(type))?.pricePerNight}
-                                </span>
-                              </div>
-                            ))}
-                            {stats.moreTypes > 0 && (
-                              <p className="text-xs text-gray-500 mt-2">+{stats.moreTypes} more room types</p>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex-1" />
-                      )}
-
-                      <button className="btn-primary w-full mt-4">
-                        View Rooms
-                      </button>
+              {featuredHotels.map((hotel) => (
+                <Link key={hotel.id} href={`/rooms?hotelId=${hotel.id}`} className="group h-full">
+                  <div className="glass-card p-6 h-full flex flex-col">
+                    <div className="bg-gradient-to-br from-red-500/20 to-red-700/20 rounded-xl p-4 mb-4">
+                      <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
                     </div>
-                  </Link>
-                );
-              })}
+                    <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-red-400 transition-colors">{hotel.name}</h3>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-background-tertiary rounded-lg p-3">
+                        <p className="text-xs text-gray-400">Rooms</p>
+                        <p className="text-xl font-bold text-white">{hotel.totalRooms}</p>
+                      </div>
+                      <div className="bg-background-tertiary rounded-lg p-3">
+                        <p className="text-xs text-gray-400">Price Range</p>
+                        <p className="text-lg font-bold text-red-400">
+                          {hotel.minPrice === hotel.maxPrice 
+                            ? `$${hotel.minPrice}` 
+                            : `$${hotel.minPrice} – $${hotel.maxPrice}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {hotel.roomTypes.length > 0 ? (
+                      <div className="flex-1 flex flex-col">
+                        <p className="text-xs text-gray-500 uppercase mb-2">Room Types</p>
+                        <div className="space-y-1">
+                          {hotel.roomTypes.slice(0, 3).map((roomType, idx) => (
+                            <div key={idx} className="flex justify-between text-sm">
+                              <span className="text-gray-300">{roomType.type}</span>
+                              <span className="text-red-400 font-medium">{roomType.count}</span>
+                            </div>
+                          ))}
+                          {hotel.roomTypes.length > 3 && (
+                            <p className="text-xs text-gray-500 mt-2">+{hotel.roomTypes.length - 3} more room types</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1" />
+                    )}
+
+                    <button className="btn-primary w-full mt-4">
+                      View Rooms
+                    </button>
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
 
