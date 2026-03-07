@@ -13,7 +13,7 @@ import Link from "next/link";
 interface Hotel {
   id: string;
   name: string;
-  rooms: any[];
+  totalRooms: number;
 }
 
 function AdminHotelsContent() {
@@ -117,9 +117,9 @@ function AdminHotelsContent() {
   const columns = [
     { key: "name", label: "Hotel Name" },
     {
-      key: "rooms",
+      key: "totalRooms",
       label: "Total Rooms",
-      render: (value: any[]) => `${value?.length || 0} rooms`,
+      render: (value: number) => `${value || 0} rooms`,
     },
   ];
 

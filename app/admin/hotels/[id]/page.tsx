@@ -10,16 +10,16 @@ import { Modal } from "@/components/modal";
 import { showToast } from "@/lib/toast";
 import Link from "next/link";
 
-interface Room {
-  id: string;
-  name: string;
-  pricePerNight: number | string;
+interface GroupedRoom {
+  roomType: string;
+  totalRooms: number;
+  pricePerNight: number;
+  roomIds: string[];
 }
 
 interface Hotel {
   id: string;
   name: string;
-  rooms: Room[];
 }
 
 function AdminHotelDetailContent() {
@@ -29,12 +29,13 @@ function AdminHotelDetailContent() {
   
   const { user, logout } = useAuth();
   const [hotel, setHotel] = useState<Hotel | null>(null);
+  const [groupedRooms, setGroupedRooms] = useState<GroupedRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRoomForm, setShowRoomForm] = useState(false);
-  const [roomData, setRoomData] = useState({ name: "", pricePerNight: "" });
+  const [roomData, setRoomData] = useState({ name: "", count: "", pricePerNight: "" });
   const [submitting, setSubmitting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
+  const [roomTypeToDelete, setRoomTypeToDelete] = useState<string | null>(null);
 
   const fetchHotel = async () => {
     try {
@@ -48,6 +49,21 @@ function AdminHotelDetailContent() {
       }
     } catch (error) {
       console.error("Failed to fetch hotel:", error);
+    }
+  };
+
+  const fetchGroupedRooms = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/hotels/${hotelId}/grouped-rooms`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setGroupedRooms(data.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch grouped rooms:", error);
     } finally {
       setLoading(false);
     }
@@ -56,6 +72,7 @@ function AdminHotelDetailContent() {
   useEffect(() => {
     if (hotelId) {
       fetchHotel();
+      fetchGroupedRooms();
     }
   }, [hotelId]);
 
@@ -65,58 +82,69 @@ function AdminHotelDetailContent() {
 
     try {
       const token = localStorage.getItem("accessToken");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rooms`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          hotelId,
-          name: roomData.name,
-          pricePerNight: parseFloat(roomData.pricePerNight),
-        }),
-      });
+      const count = parseInt(roomData.count) || 1;
 
-      if (response.ok) {
-        showToast.success("Room created successfully!");
-        setRoomData({ name: "", pricePerNight: "" });
-        setShowRoomForm(false);
-        fetchHotel();
-      } else {
-        const errorData = await response.json();
-        showToast.error(errorData.message || "Failed to create room");
+      for (let i = 1; i <= count; i++) {
+        const roomName = `${roomData.name} ${i}`;
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rooms`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            hotelId,
+            name: roomName,
+            pricePerNight: parseFloat(roomData.pricePerNight),
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          showToast.error(errorData.message || "Failed to create room");
+          setSubmitting(false);
+          return;
+        }
       }
+
+      showToast.success("Rooms created successfully!");
+      setRoomData({ name: "", count: "", pricePerNight: "" });
+      setShowRoomForm(false);
+      fetchGroupedRooms();
     } catch (error) {
-      showToast.error("Error creating room");
+      showToast.error("Error creating rooms");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteRoom = async (roomId: string) => {
-    setRoomToDelete(roomId);
+  const handleDeleteRoomType = async (roomType: string) => {
+    setRoomTypeToDelete(roomType);
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteRoom = async () => {
-    if (!roomToDelete) return;
+  const confirmDeleteRoomType = async () => {
+    if (!roomTypeToDelete) return;
 
     try {
       const token = localStorage.getItem("accessToken");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rooms/${roomToDelete}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/hotels/${hotelId}/rooms-by-type`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ roomType: roomTypeToDelete }),
       });
 
       if (response.ok) {
-        showToast.success("Room deleted successfully!");
-        fetchHotel();
+        showToast.success("Room type deleted successfully!");
+        fetchGroupedRooms();
       } else {
-        showToast.error("Failed to delete room");
+        showToast.error("Failed to delete room type");
       }
     } catch (error) {
-      showToast.error("Error deleting room");
+      showToast.error("Error deleting room type");
     }
   };
 
@@ -130,16 +158,17 @@ function AdminHotelDetailContent() {
   };
 
   const columns = [
-    { key: "name", label: "Room Name" },
+    { key: "roomType", label: "Room Type" },
+    { key: "totalRooms", label: "Total Rooms" },
     {
       key: "pricePerNight",
       label: "Price Per Night",
-      render: (value: number | string) => `$${typeof value === 'string' ? parseFloat(value).toFixed(2) : value.toFixed(2)}`,
+      render: (value: number) => `$${value.toFixed(2)}`,
     },
   ];
 
-  const actions = (row: Room) => (
-    <Button variant="secondary" onClick={() => handleDeleteRoom(row.id)} className="px-3 py-1 text-sm text-red-600">
+  const actions = (row: GroupedRoom) => (
+    <Button variant="secondary" onClick={() => handleDeleteRoomType(row.roomType)} className="px-3 py-1 text-sm text-red-600">
       Delete
     </Button>
   );
@@ -193,7 +222,7 @@ function AdminHotelDetailContent() {
             <Modal
               isOpen={showRoomForm}
               onClose={() => setShowRoomForm(false)}
-              title="Add Room"
+              title="Add Room Type"
               footer={
                 <>
                   <Button variant="secondary" onClick={() => setShowRoomForm(false)}>Cancel</Button>
@@ -203,13 +232,25 @@ function AdminHotelDetailContent() {
             >
               <form onSubmit={handleCreateRoom}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Room Name</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Room Type</label>
                   <input
                     type="text"
                     value={roomData.name}
                     onChange={(e) => setRoomData({ ...roomData, name: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    placeholder="e.g., Deluxe Room"
+                    placeholder="e.g., Deluxe NON-AC"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Number of Rooms</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={roomData.count}
+                    onChange={(e) => setRoomData({ ...roomData, count: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-800 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="1"
                     required
                   />
                 </div>
@@ -230,7 +271,7 @@ function AdminHotelDetailContent() {
 
             <DataTable 
               columns={columns} 
-              data={hotel.rooms || []} 
+              data={groupedRooms} 
               actions={actions} 
               emptyMessage="No rooms in this hotel" 
             />
@@ -238,17 +279,17 @@ function AdminHotelDetailContent() {
         </main>
       </div>
 
-      {/* Delete Room Confirmation Modal */}
+      {/* Delete Room Type Confirmation Modal */}
       <Modal
         isOpen={showDeleteModal}
         onClose={() => {
           setShowDeleteModal(false);
-          setRoomToDelete(null);
+          setRoomTypeToDelete(null);
         }}
-        onConfirm={confirmDeleteRoom}
-        title="Delete Room"
-        description="Are you sure you want to delete this room? This action cannot be undone."
-        confirmText="Delete Room"
+        onConfirm={confirmDeleteRoomType}
+        title="Delete Room Type"
+        description="Are you sure you want to delete all rooms of this type? This action cannot be undone."
+        confirmText="Delete Room Type"
         cancelText="Cancel"
         isDestructive
       />
