@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Button } from "@/components/button";
-import { useToast } from "@/components/toast";
+import { showToast } from "@/lib/toast";
 
 interface Booking {
   id: string;
@@ -28,7 +28,6 @@ interface Booking {
 
 export default function MyBookingsPage() {
   const { user } = useAuth();
-  const { addToast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,10 +46,9 @@ export default function MyBookingsPage() {
       const data = await apiClient.getUserBookings();
       setBookings(data);
     } catch (err: any) {
-      const errorMsg =
-        err.response?.data?.message || err.message || "Failed to fetch bookings";
+      const errorMsg = err.response?.data?.message || err.message || "Failed to fetch bookings";
       setError(errorMsg);
-      addToast(errorMsg, 'error');
+      showToast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -65,20 +63,16 @@ export default function MyBookingsPage() {
       setCanceling(bookingId);
       setError(null);
       await apiClient.cancelBooking(bookingId);
-      // Remove the canceled booking from the list
       setBookings((prev) =>
         prev.map((b) =>
           b.id === bookingId ? { ...b, bookingStatus: "CANCELED" } : b
         )
       );
-      addToast('Booking canceled successfully', 'success');
+      showToast.success('Booking canceled successfully');
     } catch (err: any) {
-      const errorMsg =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to cancel booking";
+      const errorMsg = err.response?.data?.message || err.message || "Failed to cancel booking";
       setError(errorMsg);
-      addToast(errorMsg, 'error');
+      showToast.error(errorMsg);
     } finally {
       setCanceling(null);
     }
@@ -121,7 +115,7 @@ export default function MyBookingsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusStyles: {
-      [key: string]: { bg: string; text: string };
+      [key: string]: { bg: string; text: string; label?: string };
     } = {
       PENDING: { bg: "bg-yellow-100", text: "text-yellow-800" },
       BOOKED: { bg: "bg-green-100", text: "text-green-800", label: "Confirmed" },
@@ -149,6 +143,12 @@ export default function MyBookingsPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <Link href="/dashboard" className="text-blue-600 hover:text-blue-800">
+              &larr; Back to Dashboard
+            </Link>
+          </div>
+
           {/* Header */}
           <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>

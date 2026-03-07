@@ -7,6 +7,7 @@ import { ProtectedAdminRoute } from "@/components/protected-admin-route";
 import { Button } from "@/components/button";
 import { DataTable } from "@/components/data-table";
 import { Modal } from "@/components/modal";
+import { showToast } from "@/lib/toast";
 import Link from "next/link";
 
 interface Room {
@@ -32,7 +33,6 @@ function AdminHotelDetailContent() {
   const [showRoomForm, setShowRoomForm] = useState(false);
   const [roomData, setRoomData] = useState({ name: "", pricePerNight: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchHotel = async () => {
     try {
@@ -60,7 +60,6 @@ function AdminHotelDetailContent() {
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setMessage(null);
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -78,16 +77,16 @@ function AdminHotelDetailContent() {
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Room created successfully!" });
+        showToast.success("Room created successfully!");
         setRoomData({ name: "", pricePerNight: "" });
         setShowRoomForm(false);
         fetchHotel();
       } else {
         const errorData = await response.json();
-        setMessage({ type: "error", text: errorData.message || "Failed to create room" });
+        showToast.error(errorData.message || "Failed to create room");
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Error creating room" });
+      showToast.error("Error creating room");
     } finally {
       setSubmitting(false);
     }
@@ -104,13 +103,13 @@ function AdminHotelDetailContent() {
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Room deleted successfully!" });
+        showToast.success("Room deleted successfully!");
         fetchHotel();
       } else {
-        setMessage({ type: "error", text: "Failed to delete room" });
+        showToast.error("Failed to delete room");
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Error deleting room" });
+      showToast.error("Error deleting room");
     }
   };
 
@@ -174,12 +173,6 @@ function AdminHotelDetailContent() {
         </nav>
 
         <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          {message && (
-            <div className={`mb-4 p-4 rounded ${message.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-              {message.text}
-            </div>
-          )}
-
           <div className="mb-6">
             <Link href="/admin/hotels" className="text-blue-600 hover:text-blue-800">← Back to Hotels</Link>
           </div>

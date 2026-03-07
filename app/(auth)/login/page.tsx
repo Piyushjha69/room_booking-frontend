@@ -11,6 +11,7 @@ import { Input } from "@/components/input";
 import { Button } from "@/components/button";
 import { AuthCard } from "@/components/auth-card";
 import { FormError } from "@/components/form-error";
+import { showToast } from "@/lib/toast";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -56,17 +57,19 @@ export default function LoginPage() {
       const response = await login(data.email, data.password);
       console.log("Login successful, user role:", response?.user?.role);
       
-      // Small delay to ensure state is properly set before navigation
+      showToast.success(`Welcome back, ${response?.user?.name || response?.user?.email}!`);
+      
       setTimeout(() => {
-        // Redirect based on user role
         if (response?.user?.role === "ADMIN") {
           router.push("/admin");
         } else {
           router.push("/dashboard");
         }
       }, 100);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login failed:", err);
+      const errorMsg = err.response?.data?.message || err.message || "Login failed. Please check your credentials.";
+      showToast.error(errorMsg);
     }
   };
 

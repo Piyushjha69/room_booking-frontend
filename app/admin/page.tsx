@@ -27,7 +27,7 @@ function AdminDashboardContent() {
 
         const [hotelsRes, bookingsRes, usersRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/hotels`, { headers }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings`, { headers }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/bookings`, { headers }),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/stats`, { headers }),
         ]);
 
@@ -36,7 +36,7 @@ function AdminDashboardContent() {
         const usersData = await usersRes.json().catch(() => ({ data: [] }));
 
         const hotels = hotelsData.data || [];
-        const bookings = bookingsData.data || [];
+        const bookings = bookingsData.data?.bookings || [];
         const users = usersData.data || [];
 
         const now = new Date();

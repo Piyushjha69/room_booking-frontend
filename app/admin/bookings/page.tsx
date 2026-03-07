@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { ProtectedAdminRoute } from "@/components/protected-admin-route";
 import { Button } from "@/components/button";
 import { DataTable } from "@/components/data-table";
+import { showToast } from "@/lib/toast";
 
 interface Booking {
   id: string;
@@ -33,18 +35,17 @@ function AdminBookingsContent() {
   const { user, logout } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const fetchBookings = async () => {
     try {
       const token = localStorage.getItem("accessToken");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/bookings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
-        setBookings(data.data || []);
+        setBookings(data.data?.bookings || []);
       }
     } catch (error) {
       console.error("Failed to fetch bookings:", error);
@@ -68,13 +69,14 @@ function AdminBookingsContent() {
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Booking canceled successfully!" });
+        showToast.success("Booking canceled successfully!");
         fetchBookings();
       } else {
-        setMessage({ type: "error", text: "Failed to cancel booking" });
+        const data = await response.json();
+        showToast.error(data.message || "Failed to cancel booking");
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Error canceling booking" });
+      showToast.error("Error canceling booking");
     }
   };
 
@@ -160,11 +162,9 @@ function AdminBookingsContent() {
         </nav>
 
         <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          {message && (
-            <div className={`mb-4 p-4 rounded ${message.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-              {message.text}
-            </div>
-          )}
+          <div className="mb-6">
+            <Link href="/admin" className="text-blue-600 hover:text-blue-800">← Back to Dashboard</Link>
+          </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
@@ -37,6 +38,7 @@ const getGradientForHotel = (id: string) => {
 const ITEMS_PER_PAGE = 6;
 
 export default function RoomsPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,13 +106,21 @@ export default function RoomsPage() {
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Browse Hotels
-            </h1>
-            <p className="text-gray-600">
-              Select a hotel to view available rooms and book your stay
-            </p>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                Browse Hotels
+              </h1>
+              <p className="text-gray-600">
+                Select a hotel to view available rooms and book your stay
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => router.push("/dashboard")}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+              </svg>
+              Back
+            </Button>
           </div>
 
           {/* Search Section */}

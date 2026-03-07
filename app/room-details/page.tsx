@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Button } from "@/components/button";
+import { showToast } from "@/lib/toast";
 import Link from "next/link";
 
 interface RoomType {
@@ -39,30 +40,40 @@ function RoomDetailsContent() {
 
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [bookingLoading, setBookingLoading] = useState<string | null>(null);
   const [today] = useState(() => {
     const date = new Date();
     return date.toISOString().split('T')[0];
   });
 
-  const fetchRoomTypes = async (start?: string, end?: string) => {
+  const fetchRoomTypes = useCallback(async (start?: string, end?: string) => {
     try {
-      setLoading(true);
+      setAvailabilityLoading(true);
       setError(null);
       const data = await apiClient.getAvailableRoomTypes(start, end, hotelId || undefined);
       setRoomTypes(data);
     } catch (err: any) {
-      const errorMsg =
-        err.response?.data?.message || err.message || "Failed to fetch room types";
+      const errorMsg = err.response?.data?.message || err.message || "Failed to fetch room types";
       setError(errorMsg);
     } finally {
+      setAvailabilityLoading(false);
       setLoading(false);
     }
-  };
+  }, [hotelId]);
+
+  const debouncedFetchAvailability = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    return (start?: string, end?: string) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        fetchRoomTypes(start, end);
+      }, 300);
+    };
+  }, [fetchRoomTypes]);
 
   useEffect(() => {
     if (!hotelId) {
@@ -71,7 +82,26 @@ function RoomDetailsContent() {
       return;
     }
     fetchRoomTypes();
-  }, [hotelId]);
+  }, [hotelId, fetchRoomTypes]);
+
+  useEffect(() => {
+    if (!startDate || !endDate) {
+      return;
+    }
+
+    const start = new Date(startDate + "T00:00:00.000Z");
+    const end = new Date(endDate + "T00:00:00.000Z");
+
+    if (start < new Date(today + "T00:00:00.000Z")) {
+      return;
+    }
+
+    if (end <= start) {
+      return;
+    }
+
+    debouncedFetchAvailability(start.toISOString(), end.toISOString());
+  }, [startDate, endDate, today, debouncedFetchAvailability]);
 
   const checkAvailability = async () => {
     if (!startDate || !endDate) {
@@ -79,10 +109,10 @@ function RoomDetailsContent() {
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(startDate + "T00:00:00.000Z");
+    const end = new Date(endDate + "T00:00:00.000Z");
 
-    if (start < new Date(today)) {
+    if (start < new Date(today + "T00:00:00.000Z")) {
       setError("Check-in date must be in the future");
       return;
     }
@@ -93,40 +123,38 @@ function RoomDetailsContent() {
     }
 
     try {
-      setCheckingAvailability(true);
+      setAvailabilityLoading(true);
       setError(null);
       await fetchRoomTypes(start.toISOString(), end.toISOString());
     } catch (err: any) {
-      const errorMsg =
-        err.response?.data?.message || err.message || "Failed to check availability";
+      const errorMsg = err.response?.data?.message || err.message || "Failed to check availability";
       setError(errorMsg);
     } finally {
-      setCheckingAvailability(false);
+      setAvailabilityLoading(false);
     }
   };
 
   const handleBook = async (roomType: RoomType) => {
     if (!startDate || !endDate) {
-      setError("Please select check-in and check-out dates first");
+      showToast.error("Please select check-in and check-out dates first");
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(startDate + "T00:00:00.000Z");
+    const end = new Date(endDate + "T00:00:00.000Z");
 
-    if (start < new Date(today)) {
-      setError("Check-in date must be in the future");
+    if (start < new Date(today + "T00:00:00.000Z")) {
+      showToast.error("Check-in date must be in the future");
       return;
     }
 
     if (end <= start) {
-      setError("Check-out date must be after check-in date");
+      showToast.error("Check-out date must be after check-in date");
       return;
     }
 
     try {
       setBookingLoading(roomType.roomType);
-      setError(null);
       
       await apiClient.createBooking({
         roomType: roomType.roomType,
@@ -135,11 +163,14 @@ function RoomDetailsContent() {
         endDate: end.toISOString(),
       });
       
-      router.push("/my-bookings");
+      showToast.success("Booking confirmed successfully! Redirecting to your bookings...");
+      
+      setTimeout(() => {
+        router.push("/my-bookings");
+      }, 1000);
     } catch (err: any) {
-      const errorMsg =
-        err.response?.data?.message || err.message || "Failed to create booking";
-      setError(errorMsg);
+      const errorMsg = err.response?.data?.message || err.message || "Failed to create booking. Please try again.";
+      showToast.error(errorMsg);
     } finally {
       setBookingLoading(null);
     }

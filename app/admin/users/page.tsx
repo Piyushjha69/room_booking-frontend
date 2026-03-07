@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { ProtectedAdminRoute } from "@/components/protected-admin-route";
 import { Button } from "@/components/button";
 import { DataTable } from "@/components/data-table";
 import { Modal } from "@/components/modal";
+import { showToast } from "@/lib/toast";
 
 interface User {
   id: string;
@@ -21,7 +23,6 @@ function AdminUsersContent() {
   const { user, logout } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newRole, setNewRole] = useState<"USER" | "ADMIN">("USER");
@@ -52,7 +53,6 @@ function AdminUsersContent() {
     if (!selectedUser) return;
     
     setSubmitting(true);
-    setMessage(null);
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -66,15 +66,15 @@ function AdminUsersContent() {
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "User role updated successfully!" });
+        showToast.success("User role updated successfully!");
         setShowRoleModal(false);
         fetchUsers();
       } else {
         const errorData = await response.json();
-        setMessage({ type: "error", text: errorData.message || "Failed to update role" });
+        showToast.error(errorData.message || "Failed to update role");
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Error updating role" });
+      showToast.error("Error updating role");
     } finally {
       setSubmitting(false);
     }
@@ -144,11 +144,9 @@ function AdminUsersContent() {
         </nav>
 
         <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          {message && (
-            <div className={`mb-4 p-4 rounded ${message.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-              {message.text}
-            </div>
-          )}
+          <div className="mb-6">
+            <Link href="/admin" className="text-blue-600 hover:text-blue-800">← Back to Dashboard</Link>
+          </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">

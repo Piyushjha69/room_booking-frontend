@@ -7,6 +7,7 @@ import { ProtectedAdminRoute } from "@/components/protected-admin-route";
 import { Button } from "@/components/button";
 import { DataTable } from "@/components/data-table";
 import { Modal } from "@/components/modal";
+import { showToast } from "@/lib/toast";
 import Link from "next/link";
 
 interface Hotel {
@@ -23,7 +24,6 @@ function AdminHotelsContent() {
   const [showForm, setShowForm] = useState(false);
   const [hotelName, setHotelName] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchHotels = async () => {
     try {
@@ -49,7 +49,6 @@ function AdminHotelsContent() {
   const handleCreateHotel = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setMessage(null);
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -63,16 +62,16 @@ function AdminHotelsContent() {
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Hotel created successfully!" });
+        showToast.success("Hotel created successfully!");
         setHotelName("");
         setShowForm(false);
         fetchHotels();
       } else {
         const errorData = await response.json();
-        setMessage({ type: "error", text: errorData.message || "Failed to create hotel" });
+        showToast.error(errorData.message || "Failed to create hotel");
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Error creating hotel" });
+      showToast.error("Error creating hotel");
     } finally {
       setSubmitting(false);
     }
@@ -89,13 +88,13 @@ function AdminHotelsContent() {
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Hotel deleted successfully!" });
+        showToast.success("Hotel deleted successfully!");
         fetchHotels();
       } else {
-        setMessage({ type: "error", text: "Failed to delete hotel" });
+        showToast.error("Failed to delete hotel");
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Error deleting hotel" });
+      showToast.error("Error deleting hotel");
     }
   };
 
@@ -144,16 +143,14 @@ function AdminHotelsContent() {
         </nav>
 
         <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          {message && (
-            <div className={`mb-4 p-4 rounded ${message.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-              {message.text}
-            </div>
-          )}
+          <div className="mb-6">
+            <Link href="/admin" className="text-blue-600 hover:text-blue-800">← Back to Dashboard</Link>
+          </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Hotels</h2>
-              <Button onClick={() => setShowForm(true)}>Add Hotel</Button>
+              <Button onClick={() => router.push("/admin/hotels/create")}>Add Hotel</Button>
             </div>
 
             <Modal

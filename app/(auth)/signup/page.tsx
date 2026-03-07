@@ -11,6 +11,7 @@ import { Input } from "@/components/input";
 import { Button } from "@/components/button";
 import { AuthCard } from "@/components/auth-card";
 import { FormError } from "@/components/form-error";
+import { showToast } from "@/lib/toast";
 import Link from "next/link";
 
 export default function SignupPage() {
@@ -56,17 +57,19 @@ export default function SignupPage() {
       const response = await signup(data.email, data.password, data.name);
       console.log("Signup successful, user role:", response?.user?.role);
       
-      // Small delay to ensure state is properly set before navigation
+      showToast.success(`Welcome aboard, ${response?.user?.name}! Your account has been created.`);
+      
       setTimeout(() => {
-        // Redirect based on user role
         if (response?.user?.role === "ADMIN") {
           router.push("/admin");
         } else {
           router.push("/dashboard");
         }
       }, 100);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Signup failed:", err);
+      const errorMsg = err.response?.data?.message || err.message || "Signup failed. Please try again.";
+      showToast.error(errorMsg);
     }
   };
 
