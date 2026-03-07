@@ -59,6 +59,20 @@ cd room_booking-frontend
 npm install
 ```
 
+## 🚀 Quick Setup (Complete Setup in 2 Steps)
+
+```bash
+# 1. Setup environment
+# Create .env.local file with backend API URL (see Environment Setup section below)
+
+# 2. Start the development server
+npm run dev
+```
+
+The frontend will be available at `http://localhost:3000`
+
+**⚠️ Prerequisites:** Ensure the backend is running at `http://localhost:5000/api`
+
 ## ⚙️ Environment Setup
 
 Create a `.env.local` file in the root directory:
