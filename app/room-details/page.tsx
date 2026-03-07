@@ -199,59 +199,93 @@ function RoomDetailsContent() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <Link href="/rooms" className="text-blue-600 hover:text-blue-800 mb-2 inline-block">
-              ← Back to Hotels
+          <div className="mb-10">
+            <Link href="/rooms" className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium group transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 group-hover:-translate-x-1 transition-transform">
+                <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+              </svg>
+              Back to Hotels
             </Link>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Room Types
-            </h1>
-            <p className="text-gray-600">
-              Select a room type to book your stay
-            </p>
+          </div>
+          <div className="mb-10">
+            <h1 className="text-5xl font-bold text-slate-900 mb-3 tracking-tight">Room Types</h1>
+            <p className="text-lg text-slate-600">Select a room type to book your stay</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h3 className="text-lg font-semibold mb-4">Check Availability</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-10 border border-slate-100">
+            <h3 className="text-xl font-bold text-slate-900 mb-6">Select Your Dates</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
                   Check-in Date
                 </label>
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    if (e.target.value && endDate) {
+                      const start = new Date(e.target.value + "T00:00:00.000Z");
+                      const end = new Date(endDate + "T00:00:00.000Z");
+                      if (end > start) {
+                        debouncedFetchAvailability(start.toISOString(), end.toISOString());
+                      }
+                    }
+                  }}
                   min={today}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
                   Check-out Date
                 </label>
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    if (startDate && e.target.value) {
+                      const start = new Date(startDate + "T00:00:00.000Z");
+                      const end = new Date(e.target.value + "T00:00:00.000Z");
+                      if (end > start) {
+                        debouncedFetchAvailability(start.toISOString(), end.toISOString());
+                      }
+                    }
+                  }}
                   min={startDate || today}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
               </div>
-              <div className="flex items-end gap-2">
+              <div className="flex items-end gap-3">
                 <Button
                   onClick={checkAvailability}
-                  disabled={checkingAvailability}
-                  className="flex-1"
+                  disabled={availabilityLoading}
+                  className="flex-1 py-3"
                 >
-                  {checkingAvailability ? "Checking..." : "Check Availability"}
+                  {availabilityLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Updating...
+                    </span>
+                  ) : (
+                    "Update"
+                  )}
                 </Button>
                 {(startDate || endDate) && (
                   <Button
-                    onClick={() => fetchRoomTypes()}
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                      fetchRoomTypes();
+                    }}
                     variant="secondary"
+                    className="px-6 py-3"
                   >
                     Clear
                   </Button>
@@ -275,10 +309,12 @@ function RoomDetailsContent() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {roomTypes.map((roomType) => (
+              {roomTypes.map((roomType) => {
+                const isSoldOut = roomType.availableRooms === 0 && Boolean(startDate) && Boolean(endDate);
+                return (
                 <div
                   key={roomType.roomType}
-                  className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col"
+                  className={`bg-white rounded-lg shadow-md overflow-hidden flex flex-col ${isSoldOut ? 'opacity-60' : ''}`}
                 >
                   <div className={`bg-gradient-to-r ${getGradientForRoomType(roomType.roomType)} h-32 flex items-center justify-center`}>
                     <div className="text-white text-center p-4">
@@ -289,7 +325,7 @@ function RoomDetailsContent() {
                   <div className="flex-1 p-6 flex flex-col">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-3xl font-bold text-green-600">
+                        <p className={`text-3xl font-bold ${isSoldOut ? 'text-gray-400' : 'text-green-600'}`}>
                           ${roomType.pricePerNight.toFixed(2)}
                           <span className="text-sm font-normal text-gray-600">/night</span>
                         </p>
@@ -298,16 +334,16 @@ function RoomDetailsContent() {
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {roomType.availableRooms} available
+                          {roomType.availableRooms > 0 ? `${roomType.availableRooms} available` : 'Sold Out'}
                         </span>
                       </div>
 
-                      {startDate && endDate && roomType.availableRooms === 0 && (
+                      {isSoldOut && (
                         <p className="text-sm text-red-600 mb-4">
                           No rooms available for selected dates
                         </p>
                       )}
-                      {startDate && endDate && roomType.availableRooms > 0 && (
+                      {!isSoldOut && startDate && endDate && roomType.availableRooms > 0 && (
                         <p className="text-sm text-green-600 mb-4">
                           {roomType.availableRooms} room(s) available for your dates
                         </p>
@@ -316,18 +352,20 @@ function RoomDetailsContent() {
 
                     <Button
                       onClick={() => handleBook(roomType)}
-                      disabled={bookingLoading === roomType.roomType || (!startDate || !endDate)}
+                      disabled={bookingLoading === roomType.roomType || (!startDate || !endDate) || isSoldOut}
                       className="w-full"
                     >
                       {bookingLoading === roomType.roomType 
                         ? "Booking..." 
-                        : startDate && endDate 
-                          ? "Book Now" 
-                          : "Select Dates First"}
+                        : isSoldOut 
+                          ? "Sold Out"
+                          : startDate && endDate 
+                            ? "Book Now" 
+                            : "Select Dates First"}
                     </Button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>
