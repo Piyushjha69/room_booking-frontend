@@ -25,32 +25,15 @@ function AdminDashboardContent() {
         const token = localStorage.getItem("accessToken");
         const headers = { Authorization: `Bearer ${token}` };
 
-        const [hotelsRes, bookingsRes, usersRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/hotels`, { headers }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/bookings`, { headers }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/stats`, { headers }),
-        ]);
-
-        const hotelsData = await hotelsRes.json();
-        const bookingsData = await bookingsRes.json();
-        const statsData = await usersRes.json().catch(() => ({ data: {} }));
-
-        const hotels = hotelsData.data || [];
-        const bookings = bookingsData.data?.bookings || [];
-        const usersCount = statsData.data?.users || 0;
-
-        const now = new Date();
-        const activeBookings = bookings.filter((b: any) => {
-          const endDate = new Date(b.endDate);
-          return b.bookingStatus !== "CANCELED" && endDate >= now;
-        }).length;
+        const statsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/stats`, { headers });
+        const statsData = await statsRes.json();
 
         setStats({
-          hotels: hotels.length,
-          rooms: hotels.reduce((sum: number, h: any) => sum + (h.rooms?.length || 0), 0),
-          bookings: bookings.length,
-          activeBookings,
-          users: usersCount,
+          hotels: statsData.data?.hotels || 0,
+          rooms: statsData.data?.rooms || 0,
+          bookings: statsData.data?.bookings || 0,
+          activeBookings: statsData.data?.activeBookings || 0,
+          users: statsData.data?.users || 0,
         });
       } catch (error) {
         console.error("Failed to fetch stats:", error);
