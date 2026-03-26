@@ -1,7 +1,32 @@
-import axios, { AxiosInstance, AxiosError } from "axios";
+import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios";
 import { AuthResponse, ApiError } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+/**
+ * Extract user-friendly rate limit message from response
+ */
+function extractRateLimitMessage(responseData: any, retryAfter?: string): string {
+  // If backend provides a message, use it
+  if (responseData?.message) {
+    const message = responseData.message as string;
+    
+    // Add retry-after info if available
+    if (retryAfter) {
+      const retrySeconds = parseInt(retryAfter, 10);
+      if (!isNaN(retrySeconds)) {
+        const minutes = Math.ceil(retrySeconds / 60);
+        return `${message} Please try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`;
+      }
+      return `${message} Please wait before trying again.`;
+    }
+    
+    return message;
+  }
+  
+  // Default rate limit message
+  return 'Too many attempts. Please try again after 15 minutes.';
+}
 
 class ApiClient {
   private client: AxiosInstance;
@@ -27,8 +52,31 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        const originalRequest = error.config as any;
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+        // Handle 429 Too Many Requests - DO NOT RETRY
+        if (error.response?.status === 429) {
+          const retryAfter = error.response.headers['retry-after'];
+          const errorMessage = extractRateLimitMessage(error.response.data, retryAfter);
+          
+          // Create a proper error object with the rate limit message
+          const rateLimitError: any = new Error(errorMessage);
+          rateLimitError.isRateLimitError = true;
+          rateLimitError.response = {
+            status: 429,
+            data: {
+              success: false,
+              statusCode: 429,
+              message: errorMessage,
+              error: 'Rate Limit Exceeded',
+            },
+            headers: error.response.headers,
+          };
+          
+          return Promise.reject(rateLimitError);
+        }
+
+        // Handle 401 Unauthorized - Attempt token refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
@@ -88,6 +136,11 @@ class ApiClient {
     try {
       return await requestFn();
     } catch (error: any) {
+      // Don't retry on rate limit errors (429)
+      if (error.response?.status === 429 || error.isRateLimitError) {
+        throw error;
+      }
+
       // Don't retry on authentication errors or client errors
       if (error.response?.status === 401 || error.response?.status === 403) {
         throw error;
@@ -98,7 +151,7 @@ class ApiClient {
         throw new Error('No internet connection. Please check your network and try again.');
       }
 
-      // Retry logic
+      // Retry logic - only for network errors or server errors (5xx)
       if (retries > 0 && (error.code === 'ERR_NETWORK' || error.response?.status >= 500)) {
         console.log(`Retrying request... (${this.maxRetries - retries + 1}/${this.maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, 1000 * (this.maxRetries - retries + 1))); // Exponential backoff
@@ -307,6 +360,16 @@ class ApiClient {
   }
 
   handleError(error: unknown): ApiError {
+    // Check if this is a rate limit error first
+    if (error && typeof error === 'object' && 'isRateLimitError' in error) {
+      const rateLimitError = error as any;
+      return {
+        message: rateLimitError.message || 'Too many attempts. Please try again later.',
+        code: 'RATE_LIMIT_EXCEEDED',
+        statusCode: 429,
+      };
+    }
+
     if (axios.isAxiosError(error)) {
       // Network errors
       if (!error.response && error.code === 'ERR_NETWORK') {
@@ -316,8 +379,25 @@ class ApiClient {
         };
       }
 
+      // Rate limit errors (429)
+      if (error.response?.status === 429) {
+        const backendMessage = error.response.data?.message;
+        return {
+          message: backendMessage || 'Too many attempts. Please try again after 15 minutes.',
+          code: 'RATE_LIMIT_EXCEEDED',
+          statusCode: 429,
+        };
+      }
+
+      // Handle other HTTP errors
       if (error.response?.data) {
-        return error.response.data as ApiError;
+        const apiData = error.response.data as any;
+        return {
+          message: apiData.message || error.message || 'An error occurred',
+          code: apiData.error || apiData.code || error.code,
+          statusCode: error.response.status,
+          details: apiData.details,
+        };
       }
 
       // Timeout errors
